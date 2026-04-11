@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stadtrat Sitzungsprotokoll</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary:  { dark: '#5A070A', DEFAULT: '#9B0000', bright: '#E6001E' },
+            accent:   { DEFAULT: '#B39F7A', light: '#E8DFCF' },
+            bg:       '#FAF8F5',
+            surface:  '#FFFFFF',
+            brd:      '#E8E2D8',
+            'tx':     '#2D2D2D',
+            'tx-m':   '#777777',
+            vote:     { yes: '#78BE1E', no: '#9B0000' },
+            absent:   '#B0B0B0',
+            info:     '#5B9BD5',
+          },
+          fontFamily: {
+            sans:  ['Noto Sans', 'system-ui', 'sans-serif'],
+            serif: ['Noto Serif', 'Georgia', 'serif'],
+          },
+          boxShadow: {
+            card:   '0 1px 3px rgba(0,0,0,0.07)',
+            'card-lg': '0 4px 16px rgba(0,0,0,0.10)',
+          },
+        }
+      }
+    };
+  </script>
+
+  <!-- React 18 -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel standalone (transforms JSX in-browser) -->
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body { background: #FAF8F5; color: #2D2D2D; }
+    .seat-node { transition: all 0.2s ease; cursor: pointer; user-select: none; }
+    .seat-node:hover { filter: brightness(1.1); transform: scale(1.08); }
+    .seat-node.disabled { cursor: default; opacity: 0.25; pointer-events: none; }
+    .seat-node.absent-seat { opacity: 0.45; }
+    .vote-badge { animation: pop 0.15s ease; }
+    @keyframes pop { 0% { transform: scale(0.7); } 100% { transform: scale(1); } }
+    .log-enter { animation: slideIn 0.2s ease; }
+    @keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body class="min-h-screen font-sans">
+  <div id="root"></div>
+
+  <!-- Data processing helpers (plain JS, no JSX) -->
+  <script src="js/data.js"></script>
+  <!-- React app (JSX compiled by Babel standalone) -->
+  <script type="text/babel" src="js/app.js"></script>
+</body>
+</html>
