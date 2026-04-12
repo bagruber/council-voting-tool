@@ -45,6 +45,8 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <!-- Babel standalone (transforms JSX in-browser) -->
   <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- JSZip for ZIP export -->
+  <script crossorigin src="https://unpkg.com/jszip@3/dist/jszip.min.js"></script>
 
   <style>
     body { background: #FAF8F5; color: #2D2D2D; }
@@ -55,26 +57,45 @@
       height: clamp(32px, 5.5vw, 50px);
       font-size: clamp(10px, 1.6vw, 13px);
     }
-    .seat-node .seat-label {
-      font-size: clamp(8px, 1.3vw, 11px);
-    }
     .seat-initials { pointer-events: none; }
 
     .seat-node { transition: all 0.2s ease; cursor: pointer; user-select: none; }
-    .seat-node:hover { filter: brightness(1.1); transform: scale(1.08); }
+    .seat-node:hover { filter: brightness(1.1); }
     .seat-node.disabled { cursor: default; opacity: 0.25; pointer-events: none; }
     .seat-node.absent-seat { opacity: 0.45; }
+    .vote-indicator { cursor: pointer; z-index: 10; transition: transform 0.1s; }
+    .vote-indicator:hover { transform: scale(1.2); }
     .vote-badge { animation: pop 0.15s ease; }
     @keyframes pop { 0% { transform: scale(0.7); } 100% { transform: scale(1); } }
     .log-enter { animation: slideIn 0.2s ease; }
     @keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 
-    /* Circle container responsive aspect ratio */
     .council-circle-container { min-height: 300px; }
-    @media (max-width: 640px) {
-      .seat-circle { width: clamp(26px, 8vw, 40px); height: clamp(26px, 8vw, 40px); font-size: clamp(9px, 2.5vw, 12px); }
-      .seat-node .seat-label { font-size: clamp(7px, 2vw, 10px); max-width: 56px !important; }
+
+    /* Outside labels */
+    .seat-label-outside {
+      position: absolute;
+      white-space: nowrap;
+      font-size: clamp(8px, 1.3vw, 11px);
+      background: rgba(255,255,255,0.92);
+      border-radius: 4px;
+      padding: 1px 5px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      pointer-events: none;
+      line-height: 1.2;
     }
+    .seat-label-outside.lbl-above { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 3px; }
+    .seat-label-outside.lbl-left  { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 5px; text-align: right; }
+    .seat-label-outside.lbl-right { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 5px; text-align: left; }
+    .seat-label-outside.lbl-below { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; }
+
+    @media (max-width: 640px) {
+      .seat-circle { width: clamp(24px, 8vw, 38px); height: clamp(24px, 8vw, 38px); font-size: clamp(9px, 2.5vw, 12px); }
+      .seat-label-outside { font-size: clamp(6px, 1.8vw, 9px); padding: 0 3px; }
+    }
+
+    .tab-active { border-bottom: 2px solid #9B0000; color: #9B0000; font-weight: 600; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #777; }
   </style>
 </head>
 <body class="min-h-screen font-sans">
