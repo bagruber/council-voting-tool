@@ -21,6 +21,10 @@ function contrastText(hex) {
   return (r * 0.299 + g * 0.587 + b * 0.114) > 160 ? '#2D2D2D' : '#FFFFFF';
 }
 
+function memberSortName(m) {
+  return m.lastName + ', ' + m.firstName;
+}
+
 /* ── Reducer ──────────────────────────────────────────── */
 const INITIAL_STATE = {
   bodyId: 'plenum',
@@ -67,7 +71,7 @@ function reducer(state, action) {
     }
 
     case 'START_SESSION': {
-      const log = addLog(state, 'session_start', 'Sitzung eroeffnet');
+      const log = addLog(state, 'session_start', 'Sitzung eröffnet');
       return { ...state, session: { ...state.session, status: 'active', id: uuid() }, log };
     }
     case 'PAUSE_SESSION': {
@@ -82,7 +86,7 @@ function reducer(state, action) {
     case 'SET_MODE': {
       const mode = action.mode;
       const t = mode === 'public' ? 'session_public' : 'session_nonpublic';
-      const msg = mode === 'public' ? 'Oeffentlicher Teil' : 'Nichtoeffentlicher Teil';
+      const msg = mode === 'public' ? 'Öffentlicher Teil' : 'Nichtöffentlicher Teil';
       return { ...state, session: { ...state.session, mode }, log: addLog(state, t, msg) };
     }
 
@@ -101,44 +105,66 @@ function reducer(state, action) {
         else                            ns[key] = 'regular';
       }
       const log = state.session.status === 'active'
-        ? addLog(state, 'presence_change', 'Anwesenheit geaendert: ' + seatKey)
+        ? addLog(state, 'presence_change', 'Anwesenheit geändert: ' + (action.memberName || seatKey))
         : state.log;
       return { ...state, seatStates: ns, log };
     }
 
     case 'START_VOTE': {
-      const presentIds = action.presentIds;
       const votes = {};
-      presentIds.forEach(id => { votes[id] = 'no'; });
-      return { ...state, currentVote: { id: uuid(), title: '', agendaItem: '', comment: '', votes } };
+      action.presentIds.forEach(id => { votes[id] = 'no'; });
+      return { ...state, currentVote: {
+        id: uuid(), title: '', agendaItem: '', comment: '',
+        votes,
+        memberNames: action.memberNames || {},
+      }};
     }
     case 'UPDATE_VOTE': {
       return { ...state, currentVote: { ...state.currentVote, ...action.fields } };
     }
     case 'CAST_VOTE': {
       const cv = state.currentVote;
-      const v = cv.votes[action.memberId] === 'yes' ? 'no' : 'yes';
-      return { ...state, currentVote: { ...cv, votes: { ...cv.votes, [action.memberId]: v } } };
+      const cur = cv.votes[action.memberId];
+      if (cur === undefined) return state; // not eligible for this vote
+      const next = cur === 'yes' ? 'no' : cur === 'no' ? 'absent' : 'yes';
+      const newVotes = { ...cv.votes, [action.memberId]: next };
+      let log = state.log;
+      if (next === 'absent') {
+        const name = cv.memberNames[action.memberId] || action.memberId;
+        log = addLog({ ...state, log }, 'presence_change', 'Abwesenheit während Abstimmung: ' + name);
+      }
+      return { ...state, currentVote: { ...cv, votes: newVotes }, log };
     }
     case 'BULK_VOTE': {
       const cv = state.currentVote;
       const nv = {};
-      Object.keys(cv.votes).forEach(id => { nv[id] = action.value; });
+      Object.keys(cv.votes).forEach(id => {
+        if (cv.votes[id] !== 'absent') nv[id] = action.value;
+        else nv[id] = 'absent';
+      });
       return { ...state, currentVote: { ...cv, votes: nv } };
     }
     case 'CONFIRM_VOTE': {
       const cv = state.currentVote;
-      const yes = Object.values(cv.votes).filter(v => v === 'yes').length;
-      const no  = Object.values(cv.votes).filter(v => v === 'no').length;
-      const eligible = Object.keys(cv.votes).length;
+      const yesVoters = [], noVoters = [], absentVoters = [];
+      Object.entries(cv.votes).forEach(([id, v]) => {
+        const name = cv.memberNames[id] || id;
+        if (v === 'yes') yesVoters.push(name);
+        else if (v === 'no') noVoters.push(name);
+        else absentVoters.push(name);
+      });
+      yesVoters.sort(); noVoters.sort(); absentVoters.sort();
+      const yes = yesVoters.length, no = noVoters.length, absent = absentVoters.length;
       const passed = yes > no;
       const record = {
         id: cv.id, timestamp: ts(), title: cv.title, agendaItem: cv.agendaItem, comment: cv.comment,
         votes: cv.votes,
-        result: { yes, no, eligible, passed },
-        presentMembers: Object.keys(cv.votes),
+        memberNames: cv.memberNames,
+        result: { yes, no, absent, eligible: yes + no, passed },
+        yesVoters, noVoters, absentVoters,
       };
-      const msg = 'Abstimmung: ' + cv.title + ' \u2013 ' + (passed ? 'angenommen' : 'abgelehnt') + ' (' + yes + ' Ja, ' + no + ' Nein)';
+      const msg = 'Abstimmung: ' + cv.title + ' – ' + (passed ? 'angenommen' : 'abgelehnt') +
+        ' (' + yes + ' Ja, ' + no + ' Nein' + (absent ? ', ' + absent + ' Abwesend' : '') + ')';
       const log = addLog(state, 'vote', msg, record);
       return { ...state, votes: [...state.votes, record], currentVote: null, log };
     }
@@ -196,45 +222,59 @@ function getSeatInfo(memberId, bodyConfig, seatStates) {
   return { eligible: false, active: false, role: 'none', substituteFor: null };
 }
 
+function getMemberRoleText(member, bodyConfig, seatInfo) {
+  if (bodyConfig.type === 'plenum') {
+    if (member.role === 'mayor') return member.title || 'Bürgermeister/in';
+    let t = 'Stadtrat';
+    if (member.title) t += ' · ' + member.title;
+    return t;
+  }
+  if (!seatInfo.eligible) return '—';
+  if (seatInfo.role === 'chair') return 'Vorsitz';
+  if (seatInfo.role === 'vicechair') return 'Stellv. Vorsitz';
+  if (seatInfo.role === 'substitute') return 'Stellvertretung';
+  return 'Mitglied';
+}
+
 /* ── Components ───────────────────────────────────────── */
 
 function BodySelector({ bodyId, bodies, onChange }) {
   return (
     <select value={bodyId} onChange={e => onChange(e.target.value)}
-      className="bg-surface border border-brd rounded-lg px-3 py-2 font-serif font-bold text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary">
-      {bodies.map(b => <option key={b.id} value={b.id}>{b.shortName || b.name}</option>)}
+      className="bg-white/20 border border-white/30 rounded-lg px-3 py-2 font-serif font-bold text-white focus:outline-none focus:ring-2 focus:ring-white/50">
+      {bodies.map(b => <option key={b.id} value={b.id} className="text-tx bg-surface">{b.shortName || b.name}</option>)}
     </select>
   );
 }
 
 function SessionControls({ session, dispatch }) {
   const { status, mode } = session;
-  const btnBase = 'px-4 py-2 rounded-lg font-semibold text-sm transition-colors ';
   return (
     <div className="flex flex-wrap items-center gap-2">
       {status === 'idle' && (
-        <button className={btnBase + 'bg-primary text-white hover:bg-primary-dark'}
-          onClick={() => dispatch({ type: 'START_SESSION' })}>Sitzung eroeffnen</button>
+        <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-white text-primary-dark hover:bg-accent-light transition-colors shadow"
+          onClick={() => dispatch({ type: 'START_SESSION' })}>Sitzung eröffnen</button>
       )}
       {status === 'active' && <>
-        <button className={btnBase + 'bg-yellow-500 text-white hover:bg-yellow-600'}
+        <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-yellow-300 text-yellow-900 hover:bg-yellow-200 transition-colors shadow"
           onClick={() => dispatch({ type: 'PAUSE_SESSION' })}>Unterbrechen</button>
-        <button className={btnBase + 'bg-red-700 text-white hover:bg-red-900'}
+        <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-white text-vote-no hover:bg-red-50 transition-colors shadow border border-red-200"
           onClick={() => dispatch({ type: 'END_SESSION' })}>Beenden</button>
       </>}
       {status === 'paused' && <>
-        <button className={btnBase + 'bg-primary text-white hover:bg-primary-dark'}
+        <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-white text-primary-dark hover:bg-accent-light transition-colors shadow"
           onClick={() => dispatch({ type: 'RESUME_SESSION' })}>Fortsetzen</button>
-        <button className={btnBase + 'bg-red-700 text-white hover:bg-red-900'}
+        <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-white text-vote-no hover:bg-red-50 transition-colors shadow border border-red-200"
           onClick={() => dispatch({ type: 'END_SESSION' })}>Beenden</button>
       </>}
       {(status === 'active' || status === 'paused') && (
-        <button className={btnBase + (mode === 'public' ? 'bg-accent-light text-tx' : 'bg-gray-700 text-white')}
+        <button className={'px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow ' +
+          (mode === 'public' ? 'bg-white/80 text-tx' : 'bg-gray-700 text-white')}
           onClick={() => dispatch({ type: 'SET_MODE', mode: mode === 'public' ? 'nonpublic' : 'public' })}>
-          {mode === 'public' ? 'Oeffentlich' : 'Nichtoeffentlich'}
+          {mode === 'public' ? 'Öffentlich' : 'Nichtöffentlich'}
         </button>
       )}
-      {status === 'ended' && <span className="text-tx-m font-serif italic">Sitzung beendet</span>}
+      {status === 'ended' && <span className="text-white/70 font-serif italic">Sitzung beendet</span>}
     </div>
   );
 }
@@ -261,34 +301,53 @@ function SessionHeader({ session, bodyId, bodies, dispatch }) {
 
 /* ── Council Circle ───────────────────────────────────── */
 
-function Seat({ member, partyColor, seatInfo, voting, voteValue, onCycle, onVote, isChair }) {
+function SeatCircle({ member, partyColor, seatInfo, voting, voteValue, onCycle, onVote, isChair, angle }) {
   const active = seatInfo.active;
   const eligible = seatInfo.eligible;
-  const size = isChair ? 56 : 46;
-  const bg = !eligible ? '#ddd' : active ? partyColor : '#ccc';
-  const txt = !eligible ? '#999' : active ? contrastText(partyColor) : '#888';
-  const ring = voting && voteValue === 'yes' ? 'ring-4 ring-vote-yes' : voting && voteValue === 'no' ? 'ring-4 ring-vote-no' : '';
-  const shortLabel = member.lastName.length > 10 ? member.lastName.substring(0, 9) + '.' : member.lastName;
+  const isInVote = voting && voteValue !== undefined;
+  const isAbsentInVote = voting && voteValue === 'absent';
+  const bg = !eligible ? '#ddd' : (!active && !isInVote) ? '#ccc' : isAbsentInVote ? '#ccc' : partyColor;
+  const txt = !eligible ? '#999' : (!active && !isInVote) ? '#888' : isAbsentInVote ? '#888' : contrastText(partyColor);
 
   const handleClick = () => {
     if (!eligible) return;
-    if (voting) { onVote(member.id); }
-    else { onCycle(member.id); }
+    if (voting) {
+      if (!isInVote) return; // not part of this vote
+      onVote(member.id);
+    } else {
+      onCycle(member.id);
+    }
   };
 
   return (
-    <div className={'seat-node flex flex-col items-center ' + (eligible ? '' : 'disabled ') + (!active && eligible ? 'absent-seat' : '')}
-      onClick={handleClick} title={member.firstName + ' ' + member.lastName + ' (' + member.currentParty.toUpperCase() + ')' + (seatInfo.role === 'substitute' ? ' [Vertretung]' : '')}>
-      <div className={'rounded-full flex items-center justify-center font-bold text-xs shadow-card ' + ring}
-        style={{ width: size, height: size, backgroundColor: bg, color: txt, border: seatInfo.role === 'substitute' ? '2px dashed #666' : 'none' }}>
-        {voting && active ? (
-          <span className="vote-badge text-lg">{voteValue === 'yes' ? '\u2713' : '\u2717'}</span>
-        ) : (
-          <span>{member.firstName.charAt(0)}{member.lastName.charAt(0)}</span>
+    <div className={'seat-node flex flex-col items-center ' + (eligible && (isInVote || !voting) ? '' : 'disabled ') + (!active && eligible && !voting ? 'absent-seat' : '')}
+      onClick={handleClick}
+      title={member.firstName + ' ' + member.lastName + (seatInfo.role === 'substitute' ? ' [Vertretung]' : '')}>
+      <div className="relative">
+        <div className={'rounded-full flex items-center justify-center font-bold shadow-card seat-circle'}
+          style={{
+            backgroundColor: bg, color: txt,
+            border: seatInfo.role === 'substitute' ? '2px dashed #666' : 'none',
+          }}>
+          <span className="seat-initials">{member.firstName.charAt(0)}{member.lastName.charAt(0)}</span>
+        </div>
+        {voting && isInVote && !isAbsentInVote && (
+          <div className={'absolute -bottom-1 -right-1 flex items-center justify-center rounded vote-badge ' +
+            (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')}
+            style={{ width: 18, height: 18 }}>
+            <span className="text-white text-[11px] font-bold">{voteValue === 'yes' ? '✓' : '✗'}</span>
+          </div>
+        )}
+        {voting && isAbsentInVote && (
+          <div className="absolute -bottom-1 -right-1 flex items-center justify-center rounded bg-absent vote-badge"
+            style={{ width: 18, height: 18 }}>
+            <span className="text-white text-[10px] font-bold">—</span>
+          </div>
         )}
       </div>
-      <span className="text-[10px] mt-1 text-center leading-tight max-w-[60px] truncate" style={{ color: eligible ? '#2D2D2D' : '#aaa' }}>
-        {shortLabel}
+      <span className="seat-label bg-white/90 rounded px-1.5 py-0.5 mt-1 text-center leading-tight truncate shadow-sm"
+        style={{ color: eligible ? '#2D2D2D' : '#aaa', maxWidth: 72 }}>
+        {member.lastName.length > 11 ? member.lastName.substring(0, 10) + '.' : member.lastName}
       </span>
       {seatInfo.role === 'substitute' && active && <span className="text-[8px] text-info font-bold">VERTR.</span>}
       {isChair && <span className="text-[8px] text-accent font-bold">VORSITZ</span>}
@@ -297,28 +356,29 @@ function Seat({ member, partyColor, seatInfo, voting, voteValue, onCycle, onVote
 }
 
 function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote, dispatch, data }) {
-  const containerRef = useRef(null);
   const ordered = useMemo(() => COUNCIL_DATA.buildSeatOrder(councillors, data.seatOrder), [councillors, data.seatOrder]);
   const n = ordered.length;
 
+  // Horseshoe: gap at bottom, seats wrap around top. Mayor at bottom center.
   const GAP_DEG = 50;
   const ARC_DEG = 360 - GAP_DEG;
-  const START_DEG = 240;
-  const RADIUS = 42;
+  const START_DEG = 60; // lower-right, sweeps through top to lower-left
 
   function pos(i, total) {
     const deg = START_DEG - (ARC_DEG * i / (total - 1 || 1));
     const rad = deg * Math.PI / 180;
-    return { x: 50 + RADIUS * Math.cos(rad), y: 50 + RADIUS * Math.sin(rad) };
+    return { x: 50 + 42 * Math.cos(rad), y: 50 + 42 * Math.sin(rad) };
   }
 
-  const handleCycle = useCallback(id => {
+  const handleCycle = useCallback((id) => {
+    const m = [...councillors, mayor].find(x => x && x.id === id);
+    const name = m ? m.firstName + ' ' + m.lastName : id;
     if (bodyConfig.type !== 'plenum') {
       const pair = bodyConfig.seatPairs.find(p => p.substitute === id);
-      if (pair) { dispatch({ type: 'CYCLE_SEAT', seatKey: pair.regular, bodyConfig }); return; }
+      if (pair) { dispatch({ type: 'CYCLE_SEAT', seatKey: pair.regular, bodyConfig, memberName: name }); return; }
     }
-    dispatch({ type: 'CYCLE_SEAT', seatKey: id, bodyConfig });
-  }, [bodyConfig, dispatch]);
+    dispatch({ type: 'CYCLE_SEAT', seatKey: id, bodyConfig, memberName: name });
+  }, [bodyConfig, dispatch, councillors, mayor]);
 
   const handleVote = useCallback(id => {
     dispatch({ type: 'CAST_VOTE', memberId: id });
@@ -327,31 +387,31 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
   const voting = !!currentVote;
 
   return (
-    <div ref={containerRef} className="relative mx-auto" style={{ width: '100%', maxWidth: 640, aspectRatio: '1' }}>
-      {mayor && (() => {
-        const info = getSeatInfo(mayor.id, bodyConfig, seatStates);
-        const party = COUNCIL_DATA.getParty(data.parties, mayor.currentParty);
-        return (
-          <div className="absolute" style={{ top: '4%', left: '50%', transform: 'translateX(-50%)' }}>
-            <Seat member={mayor} partyColor={party.color} seatInfo={info} isChair
-              voting={voting} voteValue={currentVote?.votes[mayor.id]}
-              onCycle={handleCycle} onVote={handleVote} />
-          </div>
-        );
-      })()}
-
+    <div className="relative mx-auto council-circle-container" style={{ width: '100%', maxWidth: 640, aspectRatio: '1' }}>
       {ordered.map((m, i) => {
         const { x, y } = pos(i, n);
         const info = getSeatInfo(m.id, bodyConfig, seatStates);
         const party = COUNCIL_DATA.getParty(data.parties, m.currentParty);
         return (
           <div key={m.id} className="absolute" style={{ left: x + '%', top: y + '%', transform: 'translate(-50%, -50%)' }}>
-            <Seat member={m} partyColor={party.color} seatInfo={info} isChair={false}
+            <SeatCircle member={m} partyColor={party.color} seatInfo={info} isChair={false}
               voting={voting} voteValue={currentVote?.votes[m.id]}
               onCycle={handleCycle} onVote={handleVote} />
           </div>
         );
       })}
+
+      {mayor && (() => {
+        const info = getSeatInfo(mayor.id, bodyConfig, seatStates);
+        const party = COUNCIL_DATA.getParty(data.parties, mayor.currentParty);
+        return (
+          <div className="absolute" style={{ bottom: '2%', left: '50%', transform: 'translateX(-50%)' }}>
+            <SeatCircle member={mayor} partyColor={party.color} seatInfo={info} isChair
+              voting={voting} voteValue={currentVote?.votes[mayor.id]}
+              onCycle={handleCycle} onVote={handleVote} />
+          </div>
+        );
+      })()}
 
       <CenterStats seatStates={seatStates} bodyConfig={bodyConfig} currentVote={currentVote} />
     </div>
@@ -368,6 +428,7 @@ function CenterStats({ seatStates, bodyConfig, currentVote }) {
   if (currentVote) {
     const yes = Object.values(currentVote.votes).filter(v => v === 'yes').length;
     const no  = Object.values(currentVote.votes).filter(v => v === 'no').length;
+    const absent = Object.values(currentVote.votes).filter(v => v === 'absent').length;
     return (
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
@@ -376,6 +437,11 @@ function CenterStats({ seatStates, bodyConfig, currentVote }) {
           <div className="w-12 h-px bg-brd mx-auto my-1"></div>
           <div className="text-3xl font-bold text-vote-no">{no}</div>
           <div className="text-xs text-tx-m">Nein</div>
+          {absent > 0 && <>
+            <div className="w-12 h-px bg-brd mx-auto my-1"></div>
+            <div className="text-lg font-bold text-absent">{absent}</div>
+            <div className="text-[10px] text-tx-m">Abwesend</div>
+          </>}
         </div>
       </div>
     );
@@ -391,18 +457,120 @@ function CenterStats({ seatStates, bodyConfig, currentVote }) {
   );
 }
 
+/* ── Member Cards ────────────────────────────────────── */
+
+function MemberCard({ member, partyColor, partyName, seatInfo, voting, voteValue, onCycle, onVote, bodyConfig }) {
+  const active = seatInfo.active;
+  const eligible = seatInfo.eligible;
+  const isInVote = voting && voteValue !== undefined;
+  const isAbsentInVote = voting && voteValue === 'absent';
+  const roleText = getMemberRoleText(member, bodyConfig, seatInfo);
+
+  const handleClick = () => {
+    if (!eligible) return;
+    if (voting) {
+      if (!isInVote) return;
+      onVote(member.id);
+    } else {
+      onCycle(member.id);
+    }
+  };
+
+  const borderColor = !eligible ? '#ddd' : !active && !isInVote ? '#ccc' : partyColor;
+  const opacity = (!eligible || (!active && !voting) || isAbsentInVote) ? 'opacity-50' : '';
+
+  return (
+    <div className={'bg-surface rounded-lg border-l-4 shadow-card p-3 cursor-pointer transition-all hover:shadow-card-lg ' + opacity +
+      (eligible && (isInVote || !voting) ? '' : ' pointer-events-none')}
+      style={{ borderLeftColor: borderColor }}
+      onClick={handleClick}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm truncate">{member.firstName} {member.lastName}</div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: partyColor }}></span>
+            <span className="text-xs text-tx-m truncate">{partyName}</span>
+          </div>
+          <div className="text-[11px] text-tx-m mt-0.5">{roleText}</div>
+        </div>
+        <div className="flex-shrink-0">
+          {voting && isInVote && !isAbsentInVote && (
+            <div className={'flex items-center justify-center rounded w-8 h-8 ' +
+              (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')}>
+              <span className="text-white font-bold text-sm">{voteValue === 'yes' ? '✓' : '✗'}</span>
+            </div>
+          )}
+          {voting && isAbsentInVote && (
+            <div className="flex items-center justify-center rounded w-8 h-8 bg-absent">
+              <span className="text-white font-bold text-sm">—</span>
+            </div>
+          )}
+          {!voting && eligible && (
+            <div className={'w-3 h-3 rounded-full ' + (active ? 'bg-vote-yes' : 'bg-absent')}></div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MemberCards({ allMembers, bodyConfig, seatStates, currentVote, dispatch, data }) {
+  const voting = !!currentVote;
+
+  const handleCycle = useCallback((id) => {
+    const m = allMembers.find(x => x.id === id);
+    const name = m ? m.firstName + ' ' + m.lastName : id;
+    if (bodyConfig.type !== 'plenum') {
+      const pair = bodyConfig.seatPairs.find(p => p.substitute === id);
+      if (pair) { dispatch({ type: 'CYCLE_SEAT', seatKey: pair.regular, bodyConfig, memberName: name }); return; }
+    }
+    dispatch({ type: 'CYCLE_SEAT', seatKey: id, bodyConfig, memberName: name });
+  }, [bodyConfig, dispatch, allMembers]);
+
+  const handleVote = useCallback(id => {
+    dispatch({ type: 'CAST_VOTE', memberId: id });
+  }, [dispatch]);
+
+  // Sort: eligible first (active first, then inactive), then non-eligible
+  const sorted = useMemo(() => {
+    return [...allMembers].sort((a, b) => {
+      const ai = getSeatInfo(a.id, bodyConfig, seatStates);
+      const bi = getSeatInfo(b.id, bodyConfig, seatStates);
+      if (ai.eligible !== bi.eligible) return ai.eligible ? -1 : 1;
+      if (ai.active !== bi.active) return ai.active ? -1 : 1;
+      return a.lastName.localeCompare(b.lastName);
+    });
+  }, [allMembers, bodyConfig, seatStates]);
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+      {sorted.map(m => {
+        const info = getSeatInfo(m.id, bodyConfig, seatStates);
+        const party = COUNCIL_DATA.getParty(data.parties, m.currentParty);
+        return (
+          <MemberCard key={m.id} member={m} partyColor={party.color} partyName={party.name}
+            seatInfo={info} voting={voting} voteValue={currentVote?.votes[m.id]}
+            onCycle={handleCycle} onVote={handleVote} bodyConfig={bodyConfig} />
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Vote Panel ───────────────────────────────────────── */
 
-function VotePanel({ currentVote, session, presentIds, dispatch, agenda }) {
+function VotePanel({ currentVote, session, presentIds, dispatch, agenda, activeMembers }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   if (session.status !== 'active' && session.status !== 'paused') return null;
 
   if (!currentVote) {
+    const memberNames = {};
+    activeMembers.forEach(m => { memberNames[m.id] = m.lastName + ', ' + m.firstName; });
     return (
       <div className="bg-surface rounded-lg border border-brd shadow-card p-4">
         <button className="w-full py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-colors"
-          onClick={() => dispatch({ type: 'START_VOTE', presentIds: [...presentIds] })}>
+          onClick={() => dispatch({ type: 'START_VOTE', presentIds: [...presentIds], memberNames })}>
           Neue Abstimmung
         </button>
       </div>
@@ -411,7 +579,8 @@ function VotePanel({ currentVote, session, presentIds, dispatch, agenda }) {
 
   const yes = Object.values(currentVote.votes).filter(v => v === 'yes').length;
   const no  = Object.values(currentVote.votes).filter(v => v === 'no').length;
-  const total = Object.keys(currentVote.votes).length;
+  const absent = Object.values(currentVote.votes).filter(v => v === 'absent').length;
+  const voting = yes + no;
   const passed = yes > no;
 
   return (
@@ -442,13 +611,19 @@ function VotePanel({ currentVote, session, presentIds, dispatch, agenda }) {
           onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no' })}>Alle Nein</button>
       </div>
 
-      <div className="text-center text-sm">
+      <div className="text-center text-sm space-x-2">
         <span className="text-vote-yes font-bold">{yes} Ja</span>
-        <span className="mx-2 text-tx-m">|</span>
+        <span className="text-tx-m">|</span>
         <span className="text-vote-no font-bold">{no} Nein</span>
-        <span className="mx-2 text-tx-m">|</span>
-        <span className="text-tx-m">{total} Stimmberechtigte</span>
+        {absent > 0 && <>
+          <span className="text-tx-m">|</span>
+          <span className="text-absent font-bold">{absent} Abw.</span>
+        </>}
+        <span className="text-tx-m">|</span>
+        <span className="text-tx-m">{voting} Stimmberechtigte</span>
       </div>
+
+      <p className="text-[10px] text-tx-m text-center">Klick: Ja → Nein → Abwesend → Ja</p>
 
       <div className="flex gap-2">
         <button className="flex-1 py-2 bg-gray-200 text-tx rounded-lg font-semibold text-sm hover:bg-gray-300"
@@ -459,7 +634,7 @@ function VotePanel({ currentVote, session, presentIds, dispatch, agenda }) {
       </div>
 
       {showConfirm && (
-        <VoteConfirmModal vote={currentVote} yes={yes} no={no} total={total} passed={passed}
+        <VoteConfirmModal vote={currentVote} yes={yes} no={no} absent={absent} voting={voting} passed={passed}
           onConfirm={() => { setShowConfirm(false); dispatch({ type: 'CONFIRM_VOTE' }); }}
           onCancel={() => setShowConfirm(false)} />
       )}
@@ -467,11 +642,11 @@ function VotePanel({ currentVote, session, presentIds, dispatch, agenda }) {
   );
 }
 
-function VoteConfirmModal({ vote, yes, no, total, passed, onConfirm, onCancel }) {
+function VoteConfirmModal({ vote, yes, no, absent, voting, passed, onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div className="bg-surface rounded-xl shadow-card-lg p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
-        <h3 className="font-serif font-bold text-lg text-primary-dark mb-4">Abstimmung bestaetigen</h3>
+        <h3 className="font-serif font-bold text-lg text-primary-dark mb-4">Abstimmung bestätigen</h3>
         <p className="font-semibold mb-2">{vote.title}</p>
         {vote.agendaItem && <p className="text-sm text-tx-m mb-2">{vote.agendaItem}</p>}
         <div className="flex justify-around py-4 border-y border-brd my-3">
@@ -483,17 +658,23 @@ function VoteConfirmModal({ vote, yes, no, total, passed, onConfirm, onCancel })
             <div className="text-2xl font-bold text-vote-no">{no}</div>
             <div className="text-xs text-tx-m">Nein</div>
           </div>
+          {absent > 0 && (
+            <div className="text-center">
+              <div className="text-2xl font-bold text-absent">{absent}</div>
+              <div className="text-xs text-tx-m">Abwesend</div>
+            </div>
+          )}
           <div className="text-center">
-            <div className="text-2xl font-bold">{total}</div>
-            <div className="text-xs text-tx-m">Gesamt</div>
+            <div className="text-2xl font-bold">{voting}</div>
+            <div className="text-xs text-tx-m">Abstimmende</div>
           </div>
         </div>
         <div className={'text-center font-bold text-lg mb-4 ' + (passed ? 'text-vote-yes' : 'text-vote-no')}>
           {passed ? 'ANGENOMMEN' : 'ABGELEHNT'}
         </div>
         <div className="flex gap-2">
-          <button className="flex-1 py-2 bg-gray-200 rounded-lg font-semibold" onClick={onCancel}>Zurueck</button>
-          <button className="flex-1 py-2 bg-primary text-white rounded-lg font-bold" onClick={onConfirm}>Bestaetigen</button>
+          <button className="flex-1 py-2 bg-gray-200 rounded-lg font-semibold" onClick={onCancel}>Zurück</button>
+          <button className="flex-1 py-2 bg-primary text-white rounded-lg font-bold" onClick={onConfirm}>Bestätigen</button>
         </div>
       </div>
     </div>
@@ -521,7 +702,7 @@ function AgendaPanel({ agenda, dispatch }) {
               onClick={() => dispatch({ type: 'REMOVE_AGENDA', id: a.id })}>&times;</button>
           </li>
         ))}
-        {agenda.length === 0 && <li className="text-tx-m italic">Keine Eintraege</li>}
+        {agenda.length === 0 && <li className="text-tx-m italic">Keine Einträge</li>}
       </ul>
     </div>
   );
@@ -589,6 +770,39 @@ function LogEntryRow({ entry, dispatch }) {
 
 /* ── Export ────────────────────────────────────────────── */
 function ExportPanel({ state, activeMembers }) {
+
+  function buildVoteDetail(v) {
+    let s = '';
+    s += 'Abstimmung: ' + v.title + '\n';
+    if (v.agendaItem) s += 'TOP: ' + v.agendaItem + '\n';
+    s += 'Ergebnis: ' + v.result.yes + ' Ja, ' + v.result.no + ' Nein';
+    if (v.result.absent) s += ', ' + v.result.absent + ' Abwesend';
+    s += ' – ' + (v.result.passed ? 'angenommen' : 'abgelehnt') + '\n';
+    if (v.comment) s += 'Kommentar: ' + v.comment + '\n';
+    s += '\n';
+    if (v.yesVoters && v.yesVoters.length) {
+      s += 'Ja (' + v.yesVoters.length + '):\n';
+      v.yesVoters.forEach(n => { s += '  ' + n + '\n'; });
+    }
+    if (v.noVoters && v.noVoters.length) {
+      s += 'Nein (' + v.noVoters.length + '):\n';
+      v.noVoters.forEach(n => { s += '  ' + n + '\n'; });
+    }
+    if (v.absentVoters && v.absentVoters.length) {
+      s += 'Abwesend (' + v.absentVoters.length + '):\n';
+      v.absentVoters.forEach(n => { s += '  ' + n + '\n'; });
+    }
+    return s;
+  }
+
+  function download(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const exportJSON = () => {
     const data = {
       session: {
@@ -601,11 +815,7 @@ function ExportPanel({ state, activeMembers }) {
       log: state.log,
       votes: state.votes,
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'protokoll-' + state.session.date + '.json'; a.click();
-    URL.revokeObjectURL(url);
+    download(JSON.stringify(data, null, 2), 'protokoll-' + state.session.date + '.json', 'application/json');
   };
 
   const exportMarkdown = () => {
@@ -622,17 +832,52 @@ function ExportPanel({ state, activeMembers }) {
     if (state.votes.length) {
       md += '\n## Abstimmungen\n\n';
       state.votes.forEach((v, i) => {
-        md += (i + 1) + '. **' + v.title + '** (' + v.agendaItem + ')\n';
-        md += '   Ergebnis: ' + v.result.yes + ' Ja, ' + v.result.no + ' Nein \u2013 ';
-        md += v.result.passed ? 'angenommen' : 'abgelehnt';
-        md += '\n';
+        md += '### ' + (i + 1) + '. ' + v.title + '\n\n';
+        if (v.agendaItem) md += 'TOP: ' + v.agendaItem + '\n\n';
+        md += '**Ergebnis:** ' + v.result.yes + ' Ja, ' + v.result.no + ' Nein';
+        if (v.result.absent) md += ', ' + v.result.absent + ' Abwesend';
+        md += ' – **' + (v.result.passed ? 'angenommen' : 'abgelehnt') + '**\n\n';
+        if (v.yesVoters && v.yesVoters.length) {
+          md += '**Ja (' + v.yesVoters.length + '):**\n';
+          v.yesVoters.forEach(n => { md += '- ' + n + '\n'; });
+          md += '\n';
+        }
+        if (v.noVoters && v.noVoters.length) {
+          md += '**Nein (' + v.noVoters.length + '):**\n';
+          v.noVoters.forEach(n => { md += '- ' + n + '\n'; });
+          md += '\n';
+        }
+        if (v.absentVoters && v.absentVoters.length) {
+          md += '**Abwesend (' + v.absentVoters.length + '):**\n';
+          v.absentVoters.forEach(n => { md += '- ' + n + '\n'; });
+          md += '\n';
+        }
       });
     }
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'protokoll-' + state.session.date + '.md'; a.click();
-    URL.revokeObjectURL(url);
+    download(md, 'protokoll-' + state.session.date + '.md', 'text/markdown');
+  };
+
+  const exportTxt = () => {
+    let t = 'SITZUNGSPROTOKOLL\n';
+    t += '==================\n\n';
+    t += 'Titel:   ' + state.session.title + '\n';
+    t += 'Datum:   ' + fmtDate(state.session.date) + '\n';
+    t += 'Ort:     ' + state.session.location + '\n';
+    t += 'Gremium: ' + state.bodyId + '\n\n';
+    t += 'PROTOKOLL\n';
+    t += '---------\n\n';
+    state.log.forEach(e => {
+      t += fmtTime(e.timestamp) + '  [' + e.type + ']  ' + e.message + '\n';
+      if (e.comment) t += '          Kommentar: ' + e.comment + '\n';
+    });
+    if (state.votes.length) {
+      t += '\nABSTIMMUNGEN\n';
+      t += '------------\n\n';
+      state.votes.forEach((v, i) => {
+        t += (i + 1) + '. ' + buildVoteDetail(v) + '\n';
+      });
+    }
+    download(t, 'protokoll-' + state.session.date + '.txt', 'text/plain');
   };
 
   return (
@@ -644,6 +889,9 @@ function ExportPanel({ state, activeMembers }) {
         </button>
         <button className="flex-1 py-2 bg-accent-light rounded-lg text-sm font-semibold hover:bg-accent/30" onClick={exportMarkdown}>
           Markdown
+        </button>
+        <button className="flex-1 py-2 bg-accent-light rounded-lg text-sm font-semibold hover:bg-accent/30" onClick={exportTxt}>
+          Text
         </button>
       </div>
     </div>
@@ -699,7 +947,6 @@ function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const today = useMemo(() => new Date(), []);
 
-  // Fetch members.json once on mount
   useEffect(() => {
     fetch('members.json')
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -711,8 +958,7 @@ function App() {
   const mayor = useMemo(() => activeMembers.find(m => m.role === 'mayor'), [activeMembers]);
   const councillors = useMemo(() => {
     if (!data) return [];
-    const cs = activeMembers.filter(m => m.role === 'councillor');
-    return COUNCIL_DATA.buildSeatOrder(cs, data.seatOrder);
+    return activeMembers.filter(m => m.role === 'councillor');
   }, [activeMembers, data]);
 
   const bodyDef = useMemo(() => data ? data.bodies.find(b => b.id === state.bodyId) : null, [data, state.bodyId]);
@@ -721,7 +967,6 @@ function App() {
     [bodyDef, activeMembers]
   );
 
-  // Initialize seat states when body changes or data loads
   const prevBodyRef = useRef(null);
   useEffect(() => {
     if (bodyConfig && prevBodyRef.current !== state.bodyId) {
@@ -741,14 +986,12 @@ function App() {
     [state.seatStates, bodyConfig]
   );
 
-  // LocalStorage persistence
   useEffect(() => {
     if (state.session.id) {
       try { localStorage.setItem('council-session-' + state.bodyId, JSON.stringify(state)); } catch (e) {}
     }
   }, [state]);
 
-  /* ── Loading / Error states ─── */
   if (loadError) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="bg-surface rounded-xl shadow-card-lg p-8 max-w-md text-center">
@@ -779,13 +1022,19 @@ function App() {
             <PartyLegend councillors={councillors} data={data} />
             <CouncilCircle councillors={councillors} mayor={mayor} bodyConfig={bodyConfig}
               seatStates={state.seatStates} currentVote={state.currentVote} dispatch={dispatch} data={data} />
+
+            <div className="mt-4">
+              <h3 className="font-serif font-bold text-primary-dark uppercase text-xs tracking-wider mb-3">Mitglieder</h3>
+              <MemberCards allMembers={activeMembers} bodyConfig={bodyConfig}
+                seatStates={state.seatStates} currentVote={state.currentVote} dispatch={dispatch} data={data} />
+            </div>
           </div>
 
           <div className="space-y-4">
             <SessionInfoEditor session={state.session} dispatch={dispatch} />
             <AgendaPanel agenda={state.agenda} dispatch={dispatch} />
             <VotePanel currentVote={state.currentVote} session={state.session}
-              presentIds={presentIds} dispatch={dispatch} agenda={state.agenda} />
+              presentIds={presentIds} dispatch={dispatch} agenda={state.agenda} activeMembers={activeMembers} />
             {state.session.status === 'ended' && (
               <ExportPanel state={state} activeMembers={activeMembers} />
             )}

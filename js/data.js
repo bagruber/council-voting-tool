@@ -103,7 +103,7 @@
     var ordered = [];
     order.forEach(function (pid) {
       var group = councillors
-        .filter(function (m) { return m.currentParty === pid; })
+        .filter(function (m) { return m.party === pid; })
         .sort(function (a, b) { return a.lastName.localeCompare(b.lastName); });
       ordered = ordered.concat(group);
     });
