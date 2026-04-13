@@ -182,7 +182,7 @@ function reducer(state, action) {
       if (cv) {
         const nv = { ...cv.votes };
         departed.forEach(id => { if (id in nv && nv[id] !== 'absent') nv[id] = 'absent'; });
-        arrived.forEach(id => { if (id in nv && nv[id] === 'absent') nv[id] = 'no'; });
+        arrived.forEach(id => { nv[id] = 'no'; });
         cv = { ...cv, votes: nv };
       }
 
@@ -531,12 +531,14 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
   );
   const n = ordered.length;
 
-  const GAP_DEG = 50;
-  const ARC_DEG = 360 - GAP_DEG;
-  const START_DEG = 60; // lower-right, sweeps counterclockwise through top to lower-left
+  // 27-slot symmetric arrangement: slot 0 = mayor (bottom center),
+  // slots 1 and 26 intentionally empty as buffer, councillors fill slots 2..25.
+  const SLOT_DEG = 360 / 27;
+  const MAX_COUNCIL_SLOTS = 24;
+  const startSlot = 2 + Math.max(0, Math.floor((MAX_COUNCIL_SLOTS - n) / 2));
 
-  function pos(i, total) {
-    const deg = START_DEG - (ARC_DEG * i / (total - 1 || 1));
+  function slotToPos(slot) {
+    const deg = 90 - slot * SLOT_DEG;
     const rad = deg * Math.PI / 180;
     return { x: 50 + 42 * Math.cos(rad), y: 50 + 42 * Math.sin(rad) };
   }
@@ -558,7 +560,7 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
   return (
     <div className="relative mx-auto council-circle-container" style={{ width: '100%', maxWidth: 640, aspectRatio: '1' }}>
       {ordered.map((m, i) => {
-        const { x, y } = pos(i, n);
+        const { x, y } = slotToPos(startSlot + i);
         const info = getSeatInfo(m.id, bodyConfig, seatStates);
         const party = COUNCIL_DATA.getParty(data.parties, m.currentParty);
         const lbl = getLabelPlacement(x, y);
@@ -574,8 +576,9 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
       {mayor && (() => {
         const info = getSeatInfo(mayor.id, bodyConfig, seatStates);
         const party = COUNCIL_DATA.getParty(data.parties, mayor.currentParty);
+        const mp = slotToPos(0);
         return (
-          <div className="absolute" style={{ bottom: '2%', left: '50%', transform: 'translateX(-50%)' }}>
+          <div className="absolute" style={{ left: mp.x + '%', top: mp.y + '%', transform: 'translate(-50%, -50%)' }}>
             <SeatCircle member={mayor} partyColor={party.color} seatInfo={info} isChair
               voting={voting} voteValue={currentVote?.votes[mayor.id]} labelPlacement="below"
               onPresence={handlePresence} onVote={handleVote} />
