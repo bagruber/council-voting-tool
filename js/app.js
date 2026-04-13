@@ -501,17 +501,15 @@ function SeatCircle({ member, partyColor, seatInfo, voting, voteValue, onPresenc
           <span className="seat-initials">{member.firstName.charAt(0)}{member.lastName.charAt(0)}</span>
         </div>
         {voting && isInVote && !isAbsentInVote && (
-          <div className={'vote-indicator vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded ' +
+          <div className={'vote-indicator vote-badge seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded ' +
             (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')}
-            style={{ width: 20, height: 20 }}
             onClick={e => { e.stopPropagation(); onVote(member.id); }}>
-            <span className="text-white text-[11px] font-bold">{voteValue === 'yes' ? '✓' : '✗'}</span>
+            <span className="text-white font-bold">{voteValue === 'yes' ? '✓' : '✗'}</span>
           </div>
         )}
         {voting && isAbsentInVote && (
-          <div className="absolute -bottom-1 -right-1 flex items-center justify-center rounded bg-absent"
-            style={{ width: 20, height: 20 }}>
-            <span className="text-white text-[10px] font-bold">—</span>
+          <div className="seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded bg-absent">
+            <span className="text-white font-bold">—</span>
           </div>
         )}
         <span className={'seat-label-outside lbl-' + (labelPlacement || 'above')}
