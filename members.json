@@ -12,7 +12,17 @@
     { "id": "umb",    "name": "UMB",          "color": "#4A7FB5", "accent": "#6BA3D6" },
     { "id": "parteilos", "name": "parteilos",  "color": "#999999", "accent": "#bbbbbb" }
   ],
-  "seatOrder": ["gruene", "fw", "fresh", "linke", "oedp", "fdp", "afd", "spd", "csu"],
+  "seatOrder": ["gruene", "fw", "fresh", "linke", "spd", "afd", "csu", "oedp", "fdp"],
+
+  "councilOrder": [
+    "stanglmaier", "beibl", "linz_kilian", "ruemelin", "roeck",
+    "lauterbach", "grundner", "sixt", "meier",
+    "sabanovic", "dick",
+    "strobl",
+    "marcus", "marschoun",
+    "ghadieh", "welter",
+    "haberl", "kehlringer", "linz_karin", "schweiger", "tristl", "reither", "hadersdorfer", "heinz"
+  ],
 
   "members": [
     { "id": "meinelt", "firstName": "Anita", "lastName": "Meinelt", "party": "csu", "role": "mayor", "from": "2002-05", "to": "2020-05", "title": "Erste Bürgermeisterin",
@@ -105,7 +115,7 @@
         }
       }
     },
-    { "id": "haberl", "firstName": "Ludwig", "lastName": "Haberl", "nickname": "Wick", "party": "csu", "role": "councillor", "from": "2020-05", "to": "2026-05",
+    { "id": "haberl", "firstName": "Ludwig", "lastName": "Haberl", "nickname": "Wick", "party": "csu", "role": "councillor", "from": "2020-05", "to": null,
       "profile": { "pronouns": "er/ihn" }
     },
     { "id": "kehlringer", "firstName": "Lorena", "lastName": "Kehlringer", "party": "csu", "role": "councillor", "from": "2026-05", "to": null,
@@ -115,6 +125,9 @@
       }
     },
     { "id": "reither", "firstName": "Dr. Dominikus", "lastName": "Reither", "party": "csu", "role": "councillor", "from": "2026-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+    { "id": "schweiger", "firstName": "Christian", "lastName": "Schweiger", "party": "csu", "role": "councillor", "from": "2026-05", "to": null,
       "profile": { "pronouns": "er/ihn" }
     },
 
@@ -352,7 +365,7 @@
         }
       }
     },
-    { "id": "ghadieh", "firstName": "Dr. Daoud Ghadieh", "lastName": "Moutasem", "party": "afd", "role": "councillor", "from": "2026-05", "to": null,
+    { "id": "ghadieh", "firstName": "Dr. Daoud Moutasem", "lastName": "Ghadieh", "party": "afd", "role": "councillor", "from": "2026-05", "to": null,
       "profile": { "pronouns": "er/ihn" }
     },
 

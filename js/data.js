@@ -59,6 +59,7 @@
     });
 
     var seatOrder = json.seatOrder || [];
+    var councilOrder = json.councilOrder || [];
 
     var bodies = json.bodies
       .filter(function (b) { return b.type === 'plenum' || b.type === 'ausschuss'; })
@@ -85,6 +86,7 @@
       members: members,
       bodies: bodies,
       seatOrder: seatOrder,
+      councilOrder: councilOrder,
     };
   }
 
@@ -98,17 +100,32 @@
       });
   }
 
-  function buildSeatOrder(councillors, seatOrder) {
-    var order = seatOrder.concat(['parteilos', 'umb']);
+  function buildSeatOrder(councillors, seatOrder, memberOrder) {
+    memberOrder = memberOrder || [];
+    var byId = {};
+    councillors.forEach(function (m) { byId[m.id] = m; });
+
     var ordered = [];
+    var used = new Set();
+
+    // Explicit per-member order takes precedence
+    memberOrder.forEach(function (id) {
+      if (byId[id] && !used.has(id)) {
+        ordered.push(byId[id]);
+        used.add(id);
+      }
+    });
+
+    // Remaining councillors: grouped by party, alphabetical within
+    var order = seatOrder.concat(['parteilos', 'umb']);
     order.forEach(function (pid) {
       var group = councillors
-        .filter(function (m) { return m.party === pid; })
+        .filter(function (m) { return m.party === pid && !used.has(m.id); })
         .sort(function (a, b) { return a.lastName.localeCompare(b.lastName); });
-      ordered = ordered.concat(group);
+      group.forEach(function (m) { ordered.push(m); used.add(m.id); });
     });
-    var ids = new Set(ordered.map(function (m) { return m.id; }));
-    councillors.forEach(function (m) { if (!ids.has(m.id)) ordered.push(m); });
+
+    councillors.forEach(function (m) { if (!used.has(m.id)) ordered.push(m); });
     return ordered;
   }
 

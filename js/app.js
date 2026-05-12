@@ -524,8 +524,8 @@ function SeatCircle({ member, partyColor, seatInfo, voting, voteValue, onPresenc
 function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote, dispatch, data, memberLookup }) {
   // Reverse order so it's from the chair's perspective
   const ordered = useMemo(
-    () => COUNCIL_DATA.buildSeatOrder(councillors, data.seatOrder).reverse(),
-    [councillors, data.seatOrder]
+    () => COUNCIL_DATA.buildSeatOrder(councillors, data.seatOrder, data.councilOrder).reverse(),
+    [councillors, data.seatOrder, data.councilOrder]
   );
   const n = ordered.length;
 
