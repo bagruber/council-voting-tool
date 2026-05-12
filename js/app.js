@@ -804,16 +804,24 @@ function VoteConfirmModal({ vote, yes, no, absent, voting, passed, onConfirm, on
 /* ── Agenda ────────────────────────────────────────────── */
 function AgendaPanel({ agenda, dispatch }) {
   const [val, setVal] = useState('');
+  const submit = () => {
+    const titles = val.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!titles.length) return;
+    titles.forEach(title => dispatch({ type: 'ADD_AGENDA', title }));
+    setVal('');
+  };
   return (
     <div className="bg-surface rounded-lg border border-brd shadow-card p-4">
       <h3 className="font-serif font-bold text-primary-dark uppercase text-xs tracking-wider mb-2">Tagesordnung</h3>
-      <div className="flex gap-2 mb-2">
-        <input type="text" value={val} placeholder="Neuer TOP..." onChange={e => setVal(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && val.trim()) { dispatch({ type: 'ADD_AGENDA', title: val.trim() }); setVal(''); } }}
-          className="flex-1 border border-brd rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none" />
-        <button className="px-3 py-1.5 bg-accent-light rounded-lg text-sm font-semibold hover:bg-accent/30"
-          onClick={() => { if (val.trim()) { dispatch({ type: 'ADD_AGENDA', title: val.trim() }); setVal(''); } }}>+</button>
+      <div className="flex gap-2 mb-1">
+        <textarea value={val} placeholder="Neuer TOP… (Enter = hinzufügen, Shift+Enter = neue Zeile)" rows={1}
+          onChange={e => setVal(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
+          className="flex-1 border border-brd rounded-lg px-3 py-1.5 text-sm resize-y focus:ring-2 focus:ring-primary focus:outline-none" />
+        <button className="px-3 py-1.5 bg-accent-light rounded-lg text-sm font-semibold hover:bg-accent/30 self-start"
+          onClick={submit}>+</button>
       </div>
+      <p className="text-[10px] text-tx-m mb-2">Mehrere Zeilen = mehrere TOPs auf einmal.</p>
       <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">
         {agenda.map(a => (
           <li key={a.id} className="flex items-center justify-between group">
