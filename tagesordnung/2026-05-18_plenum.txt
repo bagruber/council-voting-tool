@@ -1,10 +1,10 @@
-Ö1	Mitteilungen des Ersten Bürgermeisters
-Ö2  Bürgerfragen gem. § 27 Abs. 2 GeschO/StR
-Ö3  Genehmigung der öffentlichen Niederschriften (StR 25.03.; BA 13.04.; StR 20.04.)
-Ö4	Neubau Kinderhaus Aich - Vorstellung und Entscheidung zur Vorentwurfsplanung -
-Ö5	Beschluss über die Nutzung des Schulsportplatzes an der Neustadtstraße für Schulklassencontainer durch den Landkreis Freising
-Ö6	Beschluss über den Antrag des Jazzclub Hirsch auf einen einmaligen Förderzuschuss in Höhe von 3.000 €
-Ö7	Baugesuche und Anträge
-Ö7.1    Neubau e. Mehrfamilienhauses mit 12 Wohneinh u. Tiefgarage a.d. Bahnhofstr. 60, Moosburg, erneute Behandlung des Bauvorhabens; Schreiben des LRA, FS v. 14.04.2026 weg. Ersetzung des gemeindlichen Einvernehmens
-Ö7.2	Neubau eines Mehrfamilienhauses mit 8 Wohneinheiten und Tiefgarage - Sudetenlandstr. 28
-Ö8	Anfragen
+Ö1 Mitteilungen des Ersten Bürgermeisters
+Ö2 Bürgerfragen gem. § 27 Abs. 2 GeschO/StR
+Ö3 Genehmigung der öffentlichen Niederschriften (StR 25.03.; BA 13.04.; StR 20.04.)
+Ö4 Neubau Kinderhaus Aich - Vorstellung und Entscheidung zur Vorentwurfsplanung -
+Ö5 Beschluss über die Nutzung des Schulsportplatzes an der Neustadtstraße für Schulklassencontainer durch den Landkreis Freising
+Ö6 Beschluss über den Antrag des Jazzclub Hirsch auf einen einmaligen Förderzuschuss in Höhe von 3.000 €
+Ö7 Baugesuche und Anträge
+Ö7.1 Neubau e. Mehrfamilienhauses mit 12 Wohneinh u. Tiefgarage a.d. Bahnhofstr. 60, Moosburg, erneute Behandlung des Bauvorhabens; Schreiben des LRA, FS v. 14.04.2026 weg. Ersetzung des gemeindlichen Einvernehmens
+Ö7.2 Neubau eines Mehrfamilienhauses mit 8 Wohneinheiten und Tiefgarage - Sudetenlandstr. 28
+Ö8 Anfragen
