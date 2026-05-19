@@ -15,13 +15,13 @@
   "seatOrder": ["gruene", "fw", "fresh", "linke", "spd", "afd", "csu", "oedp", "fdp"],
 
   "councilOrder": [
-    "stanglmaier", "beibl", "linz_kilian", "ruemelin", "roeck",
-    "lauterbach", "grundner", "sixt", "meier",
+    "stanglmaier", "beibl", "ruemelin", "linz_kilian", "roeck",
+    "lauterbach", "meier", "grundner", "sixt",
     "sabanovic", "dick",
     "strobl",
     "marcus", "marschoun",
     "ghadieh", "welter",
-    "haberl", "kehlringer", "linz_karin", "schweiger", "tristl", "reither", "hadersdorfer", "heinz"
+    "tristl", "haberl", "kehlringer", "linz_karin", "schweiger", "reither", "hadersdorfer", "heinz"
   ],
 
   "members": [
