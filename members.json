@@ -424,28 +424,37 @@
       "type": "ausschuss",
       "icon": "engineering",
       "description": "Der Bauausschuss entscheidet über Bauanträge, Bebauungspläne, Verkehrsplanung und Umweltfragen. Er besteht aus 9 stimmberechtigten Mitgliedern plus dem Vorsitzenden.",
-      "chair": "dollinger",
+      "chair": "mader",
       "vicechairs": [
-        { "member": "hadersdorfer", "sub": "heinz" },
-        { "member": "stanglmaier", "sub": "becher_j" }
+        { "member": "stanglmaier", "sub": "linz_kilian" }
       ],
       "seats": [
-        { "member": "beibl", "sub": "von_pressentin" },
-        { "member": "hobmaier", "sub": "gruber" },
-        { "member": "kieninger", "sub": "lauterbach" },
-        { "member": "linz_karin", "sub": "weber" },
-        { "member": "linz_kilian", "sub": "becher_a" },
-        { "member": "marcus", "sub": "pschorr" },
-        { "member": "reif", "sub": "grundner" },
+        { "member": "beibl", "sub": "roeck" },
+        { "member": "hadersdorfer", "sub": "kehlringer" },
+        { "member": "linz_karin", "sub": "reither" },
+        { "member": "marschoun", "sub": "marcus" },
+        { "member": "meier", "sub": "lauterbach" },
+        { "member": "sabanovic", "sub": "dick" },
+        { "member": "schweiger", "sub": "heinz" },
+        { "member": "sixt", "sub": "grundner" },
         { "member": "tristl", "sub": "haberl" },
-        { "member": "welter" }
+        { "member": "welter", "sub": "ghadieh" }
       ],
       "pastSeats": [
         { "member": "altenbeck", "to": "2022-05" },
         { "member": "beubl", "to": "2025-03" },
         { "member": "gruebl", "from": "2021-10", "to": "2024-10" },
         { "member": "wittmann", "from": "2020-05", "to": "2021-10" },
-        { "member": "wagner", "sub": true, "to": "2022-05" }
+        { "member": "wagner", "sub": true, "to": "2022-05" },
+        { "member": "hobmaier", "to": "2026-05" },
+        { "member": "kieninger", "to": "2026-05" },
+        { "member": "reif", "to": "2026-05" },
+        { "member": "becher_a", "sub": true, "to": "2026-05" },
+        { "member": "becher_j", "sub": true, "to": "2026-05" },
+        { "member": "gruber", "sub": true, "to": "2026-05" },
+        { "member": "pschorr", "sub": true, "to": "2026-05" },
+        { "member": "von_pressentin", "sub": true, "to": "2026-05" },
+        { "member": "weber", "sub": true, "to": "2026-05" }
       ]
     },
     {
@@ -455,22 +464,36 @@
       "type": "ausschuss",
       "icon": "payments",
       "description": "Der HVFA bereitet Haushaltsentscheidungen vor und behandelt Finanz- sowie allgemeine Verwaltungsangelegenheiten.",
-      "chair": "dollinger",
+      "chair": "mader",
+      "vicechairs": [
+        { "member": "lauterbach", "sub": "meier" }
+      ],
       "seats": [
-        { "member": "becher_a", "sub": "von_pressentin" },
-        { "member": "haberl", "sub": "tristl" },
-        { "member": "hobmaier", "sub": "gruber" },
-        { "member": "marcus", "sub": "pschorr" },
-        { "member": "reif", "sub": "grundner" },
-        { "member": "stanglmaier", "sub": "beibl" },
-        { "member": "weber", "sub": "linz_karin" }
+        { "member": "ghadieh", "sub": "welter" },
+        { "member": "dick", "sub": "sabanovic" },
+        { "member": "grundner", "sub": "sixt" },
+        { "member": "heinz", "sub": "schweiger" },
+        { "member": "kehlringer", "sub": "hadersdorfer" },
+        { "member": "linz_kilian", "sub": "beibl" },
+        { "member": "marcus", "sub": "marschoun" },
+        { "member": "reither", "sub": "linz_karin" },
+        { "member": "ruemelin", "sub": "roeck" },
+        { "member": "tristl", "sub": "haberl" }
       ],
       "pastSeats": [
         { "member": "wagner", "to": "2022-05" },
         { "member": "altenbeck", "sub": true, "to": "2022-05" },
         { "member": "beubl", "sub": true, "to": "2025-03" },
         { "member": "gruebl", "sub": true, "from": "2021-10", "to": "2024-10" },
-        { "member": "wittmann", "sub": true, "from": "2020-05", "to": "2021-10" }
+        { "member": "wittmann", "sub": true, "from": "2020-05", "to": "2021-10" },
+        { "member": "becher_a", "to": "2026-05" },
+        { "member": "hobmaier", "to": "2026-05" },
+        { "member": "reif", "to": "2026-05" },
+        { "member": "stanglmaier", "to": "2026-05" },
+        { "member": "weber", "to": "2026-05" },
+        { "member": "gruber", "sub": true, "to": "2026-05" },
+        { "member": "pschorr", "sub": true, "to": "2026-05" },
+        { "member": "von_pressentin", "sub": true, "to": "2026-05" }
       ]
     },
     {
