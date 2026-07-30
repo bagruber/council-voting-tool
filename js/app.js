@@ -21,24 +21,115 @@ function contrastText(hex) {
   return (r * 0.299 + g * 0.587 + b * 0.114) > 160 ? '#2D2D2D' : '#FFFFFF';
 }
 
-function download(content, filename, type) {
-  const blob = new Blob([content], { type });
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
 
-function clearBackup() {
-  try { localStorage.removeItem('council-session-backup'); } catch (e) {}
+function download(content, filename, type) {
+  downloadBlob(new Blob([content], { type }), filename);
 }
+
+/* Demo mode runs off the same reducer as a real session, so it must not
+   touch — or be recovered from — the real session's backup slot. */
+const DEMO_MODE = new URLSearchParams(location.search).has('demo');
+const BACKUP_KEY = 'council-session-backup';
+
+function clearBackup() {
+  try { localStorage.removeItem(BACKUP_KEY); } catch (e) {}
+}
+
+/* ── Keyboard ─────────────────────────────────────────── */
+const SHORTCUTS = [
+  { key: 'A', label: 'Neue Abstimmung starten' },
+  { key: 'J', label: 'Alle Ja' },
+  { key: 'N', label: 'Alle Nein' },
+  { key: '↵', label: 'Abstimmung speichern' },
+  { key: 'Esc', label: 'Dialog schließen / Abstimmung abbrechen' },
+  { key: '?', label: 'Diese Übersicht' },
+];
+
+/* Handlers are read through a ref so the listener binds once and still
+   sees fresh state. Letter keys stay inert while a field has focus;
+   Enter and Escape keep working there, since that is where they belong. */
+function useHotkeys(handlers) {
+  const ref = useRef(handlers);
+  ref.current = handlers;
+
+  useEffect(() => {
+    const onKey = e => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target;
+      const tag = t ? t.tagName : '';
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable);
+      const h = ref.current;
+
+      if (e.key === 'Escape') { h.onCancel && h.onCancel(); return; }
+      // Buttons, links and the agenda textarea own Enter themselves.
+      if (e.key === 'Enter' && tag !== 'TEXTAREA' && tag !== 'BUTTON' && tag !== 'A') {
+        if (h.onSave && h.onSave()) e.preventDefault();
+        return;
+      }
+      if (typing) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'a': if (h.onNewVote) { e.preventDefault(); h.onNewVote(); } break;
+        case 'j': if (h.onBulkYes) { e.preventDefault(); h.onBulkYes(); } break;
+        case 'n': if (h.onBulkNo)  { e.preventDefault(); h.onBulkNo(); } break;
+        case '?': if (h.onHelp)    { e.preventDefault(); h.onHelp(); } break;
+        default: break;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+}
+
+/* ── Demo ─────────────────────────────────────────────── */
+/* ?demo opens a real, fully interactive session pinned to the Bauausschuss
+   sitting of 13.07.2026 — its agenda file is picked up by the normal
+   tagesordnung/ loader, so nothing here is faked. */
+const DEMO_SESSION = {
+  bodyId: 'bpu',
+  date: '2026-07-13',
+  title: 'Bau-, Planungs- und Umweltausschuss (Demo)',
+};
+
+/* Each step completes when the reducer state says it happened, so the tour
+   follows whatever the user actually does — including out of order. */
+const DEMO_STEPS = [
+  { title: 'Sitzung eröffnen',
+    hint: 'Oben rechts. Die Anwesenheit zu Beginn wird dabei namentlich protokolliert.',
+    done: s => s.session.status !== 'idle' },
+  { title: 'Stellvertretung einrücken lassen',
+    hint: 'Einen Sitz anklicken: 1× Stellvertretung übernimmt, 2× Sitz bleibt leer, 3× zurück zum ordentlichen Mitglied. Nie sind beide gleichzeitig stimmberechtigt.',
+    done: s => Object.values(s.seatStates).some(v => v !== 'regular' && v !== 'present') },
+  { title: 'Abstimmung starten',
+    hint: 'Auf einen TOP in der Tagesordnung klicken — der Punkt wird übernommen. Oder Taste A.',
+    done: s => !!s.currentVote || s.votes.length > 0 },
+  { title: 'Stimmen erfassen und speichern',
+    hint: 'J = alle Ja, N = alle Nein, einzelne Stimmen über das Quadrat am Sitz. Dann Titel eintragen und speichern.',
+    done: s => s.votes.length > 0 },
+  { title: 'In den nichtöffentlichen Teil wechseln',
+    hint: 'Der Button „Öffentlich“ schaltet um. Abstimmungen ab hier landen im getrennten Export.',
+    done: s => s.log.some(e => e.type === 'session_nonpublic') },
+  { title: 'Sitzung beenden',
+    hint: '„Beenden“ schließt die Sitzung ab und gibt den Export frei.',
+    done: s => s.session.status === 'ended' },
+  { title: 'Protokoll exportieren',
+    hint: 'ZIP enthält Protokolltext plus öffentliche und nichtöffentliche Abstimmungen getrennt.',
+    done: () => false },
+];
 
 /* ── Reducer ──────────────────────────────────────────── */
 const INITIAL_STATE = {
-  bodyId: 'plenum',
+  bodyId: DEMO_MODE ? DEMO_SESSION.bodyId : 'plenum',
   session: {
-    id: null, title: 'Stadtratssitzung',
-    date: new Date().toISOString().slice(0, 10),
+    id: null,
+    title: DEMO_MODE ? DEMO_SESSION.title : 'Stadtratssitzung',
+    date: DEMO_MODE ? DEMO_SESSION.date : new Date().toISOString().slice(0, 10),
     location: 'Rathaus Moosburg, Sitzungssaal',
     status: 'idle', mode: 'public',
   },
@@ -193,7 +284,7 @@ function reducer(state, action) {
       const votes = {};
       action.presentIds.forEach(id => { votes[id] = 'no'; });
       return { ...state, currentVote: {
-        id: uuid(), title: '', agendaItem: '', comment: '',
+        id: uuid(), title: '', agendaItem: action.agendaItem || '', comment: '',
         votes, memberNames: action.memberNames || {},
       }};
     }
@@ -318,6 +409,35 @@ function getLabelPlacement(x, y) {
   return dx >= 0 ? 'right' : 'left';
 }
 
+/* Canonical German phrasing for one log entry. The on-screen protocol and
+   the TXT/MD exports both read from here so their wording cannot drift.
+   Returns null for entries that carry no narrative line. */
+function logEntryText(entry) {
+  const p = entry.payload;
+  switch (entry.type) {
+    case 'presence_change':
+      if (!p) return null;
+      return p.newState === 'present'
+        ? p.memberName + ' ist der Sitzung beigetreten'
+        : p.memberName + ' hat die Sitzung verlassen';
+    case 'vote': {
+      if (!p) return null;
+      let s = 'Abstimmung: ' + p.title;
+      if (p.agendaItem) s += ' (' + p.agendaItem + ')';
+      s += ' – ' + (p.result.passed ? 'angenommen' : 'abgelehnt') +
+        ' (' + p.result.yes + ' Ja, ' + p.result.no + ' Nein' +
+        (p.result.absent ? ', ' + p.result.absent + ' Abwesend' : '') + ')';
+      return s;
+    }
+    case 'session_end':       return 'Sitzung beendet';
+    case 'session_pause':     return 'Sitzung unterbrochen';
+    case 'session_resume':    return 'Sitzung fortgesetzt';
+    case 'session_public':    return 'Öffentlicher Teil';
+    case 'session_nonpublic': return 'Nichtöffentlicher Teil';
+    default: return null;
+  }
+}
+
 /* ── Human-readable protocol text ─────────────────────── */
 function generateHumanProtocol(state, bodyName) {
   let t = '';
@@ -342,25 +462,8 @@ function generateHumanProtocol(state, bodyName) {
 
   t += 'VERLAUF\n-------\n\n';
   state.log.forEach(entry => {
-    if (entry.type === 'session_start') return;
-    const time = fmtTime(entry.timestamp);
-    if (entry.type === 'presence_change' && entry.payload) {
-      const p = entry.payload;
-      t += time + '  ' + (p.newState === 'present'
-        ? p.memberName + ' ist der Sitzung beigetreten'
-        : p.memberName + ' hat die Sitzung verlassen') + '\n';
-    } else if (entry.type === 'vote' && entry.payload) {
-      const v = entry.payload;
-      t += time + '  Abstimmung: ' + v.title;
-      if (v.agendaItem) t += ' (' + v.agendaItem + ')';
-      t += '\n         Ergebnis: ' + v.result.yes + ' Ja, ' + v.result.no + ' Nein';
-      if (v.result.absent) t += ', ' + v.result.absent + ' Abwesend';
-      t += ' – ' + (v.result.passed ? 'angenommen' : 'abgelehnt') + '\n';
-    } else if (entry.type === 'session_end') { t += time + '  Sitzung beendet\n'; }
-    else if (entry.type === 'session_pause') { t += time + '  Sitzung unterbrochen\n'; }
-    else if (entry.type === 'session_resume') { t += time + '  Sitzung fortgesetzt\n'; }
-    else if (entry.type === 'session_public') { t += time + '  Öffentlicher Teil\n'; }
-    else if (entry.type === 'session_nonpublic') { t += time + '  Nichtöffentlicher Teil\n'; }
+    const text = logEntryText(entry);
+    if (text) t += fmtTime(entry.timestamp) + '  ' + text + '\n';
   });
 
   if (state.votes.length) {
@@ -382,7 +485,7 @@ function generateHumanProtocol(state, bodyName) {
 }
 
 /* ── Export helpers ────────────────────────────────────── */
-function buildPresenceJSON(state, memberLookup, parties) {
+function buildPresenceJSON(state, memberLookup) {
   const entries = [];
   Object.entries(state.presenceHistory).forEach(([id, history]) => {
     const name = memberLookup[id] || id;
@@ -410,6 +513,40 @@ function buildVoteJSON(vote, presenceHistory) {
     ja: vote.yesVoters || [], nein: vote.noVoters || [],
     kurzzeitig_abwesend: shortAbsent.sort(), abwesend: generalAbsent.sort(),
   };
+}
+
+/* The full ZIP bundle: readable protocol plus the public and non-public
+   vote records split into separate files. Shared by the export panel and
+   the crash-recovery dialog. */
+function buildZipBlob(state, memberLookup, bodyName) {
+  const zip = new JSZip();
+  zip.file('protokoll.txt', generateHumanProtocol(state, bodyName));
+
+  const base = {
+    sitzung: { titel: state.session.title, datum: state.session.date,
+      ort: state.session.location, gremium: bodyName },
+    anwesenheit: buildPresenceJSON(state, memberLookup),
+  };
+  const votesFor = mode => state.votes
+    .filter(v => v.mode === mode)
+    .map(v => buildVoteJSON(v, state.presenceHistory));
+
+  zip.file('oeffentlich.json', JSON.stringify({ ...base, teil: 'öffentlich', abstimmungen: votesFor('public') }, null, 2));
+  zip.file('nichtoeffentlich.json', JSON.stringify({ ...base, teil: 'nichtöffentlich', abstimmungen: votesFor('nonpublic') }, null, 2));
+
+  return zip.generateAsync({ type: 'blob' });
+}
+
+/* Toggling a seat always acts on the regular member's seat key, even when
+   the substitute was the one clicked. Shared by the circle and the cards. */
+function usePresenceToggle(bodyConfig, dispatch, memberLookup) {
+  return useCallback(id => {
+    if (bodyConfig.type !== 'plenum') {
+      const pair = bodyConfig.seatPairs.find(p => p.substitute === id);
+      if (pair) { dispatch({ type: 'CYCLE_SEAT', seatKey: pair.regular, bodyConfig, memberLookup }); return; }
+    }
+    dispatch({ type: 'CYCLE_SEAT', seatKey: id, bodyConfig, memberLookup });
+  }, [bodyConfig, dispatch, memberLookup]);
 }
 
 /* ── Components ───────────────────────────────────────── */
@@ -455,9 +592,9 @@ function SessionControls({ session, dispatch, bodyConfig, memberLookup }) {
   );
 }
 
-function SessionHeader({ session, bodyId, bodies, dispatch, bodyConfig, memberLookup }) {
+function SessionHeader({ session, bodyId, bodies, dispatch, bodyConfig, memberLookup, onShowHelp }) {
   return (
-    <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-bright text-white px-6 py-4 shadow-card-lg">
+    <header className="bg-gradient-to-r from-primary-dark to-primary text-white px-6 py-4">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <BodySelector bodyId={bodyId} bodies={bodies} onChange={id => {
@@ -466,10 +603,15 @@ function SessionHeader({ session, bodyId, bodies, dispatch, bodyConfig, memberLo
           }} />
           <div>
             <h1 className="font-serif font-bold text-lg leading-tight">{session.title}</h1>
-            <p className="text-sm opacity-80">{fmtDate(session.date)} &middot; {session.location}</p>
+            <p className="text-sm opacity-90">{fmtDate(session.date)} &middot; {session.location}</p>
           </div>
         </div>
-        <SessionControls session={session} dispatch={dispatch} bodyConfig={bodyConfig} memberLookup={memberLookup} />
+        <div className="flex items-center gap-2">
+          <SessionControls session={session} dispatch={dispatch} bodyConfig={bodyConfig} memberLookup={memberLookup} />
+          <button type="button" onClick={onShowHelp}
+            className="w-9 h-9 flex-shrink-0 rounded-lg border border-white/40 font-bold hover:bg-white/15"
+            aria-label="Tastaturkürzel anzeigen" title="Tastaturkürzel (?)">?</button>
+        </div>
       </div>
     </header>
   );
@@ -477,46 +619,51 @@ function SessionHeader({ session, bodyId, bodies, dispatch, bodyConfig, memberLo
 
 /* ── Council Circle ───────────────────────────────────── */
 
-function SeatCircle({ member, partyColor, seatInfo, voting, voteValue, onPresence, onVote, isChair, labelPlacement }) {
+function SeatCircle({ member, partyColor, seatInfo, voting, voteValue, onPresence, onVote, labelPlacement }) {
   const active = seatInfo.active;
   const eligible = seatInfo.eligible;
   const isInVote = voting && voteValue !== undefined;
   const isAbsentInVote = voting && voteValue === 'absent';
-  const bg = !eligible ? '#ddd' : (!active && !isInVote) ? '#ccc' : isAbsentInVote ? '#ccc' : partyColor;
-  const txt = !eligible ? '#999' : (!active && !isInVote) ? '#888' : isAbsentInVote ? '#888' : contrastText(partyColor);
+  const bg = !eligible ? '#DDDCD8' : (!active && !isInVote) ? '#CBCAC6' : isAbsentInVote ? '#CBCAC6' : partyColor;
+  const txt = !eligible ? '#8A8A87' : (!active && !isInVote) ? '#5F5F5C' : isAbsentInVote ? '#5F5F5C' : contrastText(partyColor);
 
-  const handlePresenceClick = () => {
-    if (!eligible) return;
-    onPresence(member.id);
-  };
+  const fullName = member.firstName + ' ' + member.lastName;
+  const isSub = seatInfo.role === 'substitute';
+  // Only clips beyond 14 chars, so no current council name is abbreviated.
+  const label = member.lastName.length > 14 ? member.lastName.substring(0, 13) + '.' : member.lastName;
 
   return (
-    <div className={'seat-node ' + (eligible ? '' : 'disabled ') + (!active && eligible && !voting ? 'absent-seat' : '')}
-      onClick={handlePresenceClick}
-      title={member.firstName + ' ' + member.lastName + (seatInfo.role === 'substitute' ? ' [Vertretung]' : '')}>
-      <div className="relative inline-flex items-center justify-center">
-        <div className={'seat-circle rounded-full flex items-center justify-center font-bold shadow-card'}
-          style={{ backgroundColor: bg, color: txt,
-            border: seatInfo.role === 'substitute' ? '2px dashed #666' : 'none' }}>
+    <div className="relative inline-flex items-center justify-center">
+      <button type="button" disabled={!eligible}
+        className={'seat-node relative ' + (eligible ? '' : 'disabled ') + (!active && eligible && !voting ? 'absent-seat' : '')}
+        onClick={() => onPresence(member.id)}
+        aria-pressed={eligible ? active : undefined}
+        aria-label={fullName + (isSub ? ' (Vertretung)' : '') + ' – ' + (active ? 'anwesend' : 'abwesend')}
+        title={fullName + (isSub ? ' [Vertretung]' : '')}>
+        <span className="seat-circle rounded-full flex items-center justify-center font-bold shadow-card"
+          style={{ backgroundColor: bg, color: txt, border: isSub ? '2px dashed #5A5A57' : 'none' }}>
           <span className="seat-initials">{member.firstName.charAt(0)}{member.lastName.charAt(0)}</span>
-        </div>
-        {voting && isInVote && !isAbsentInVote && (
-          <div className={'vote-indicator vote-badge seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded ' +
-            (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')}
-            onClick={e => { e.stopPropagation(); onVote(member.id); }}>
-            <span className="text-white font-bold">{voteValue === 'yes' ? '✓' : '✗'}</span>
-          </div>
-        )}
-        {voting && isAbsentInVote && (
-          <div className="seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded bg-absent">
-            <span className="text-white font-bold">—</span>
-          </div>
-        )}
-        <span className={'seat-label-outside lbl-' + (labelPlacement || 'above')}
-          style={{ color: eligible ? '#2D2D2D' : '#aaa' }}>
-          {member.lastName.length > 11 ? member.lastName.substring(0, 10) + '.' : member.lastName}
         </span>
-      </div>
+        <span className={'seat-label-outside lbl-' + (labelPlacement || 'above')}
+          style={{ color: eligible ? '#2D2D2D' : '#8A8A87' }}>
+          {label}
+        </span>
+      </button>
+      {voting && isInVote && !isAbsentInVote && (
+        <button type="button"
+          className={'vote-indicator vote-badge seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded ' +
+            (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')}
+          onClick={() => onVote(member.id)}
+          aria-label={fullName + ' – Stimme ' + (voteValue === 'yes' ? 'Ja' : 'Nein') + ', klicken zum Wechseln'}>
+          <span className="text-white font-bold">{voteValue === 'yes' ? '✓' : '✗'}</span>
+        </button>
+      )}
+      {voting && isAbsentInVote && (
+        <span className="seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded bg-absent"
+          title={fullName + ' – abwesend'}>
+          <span className="text-white font-bold">—</span>
+        </span>
+      )}
     </div>
   );
 }
@@ -541,13 +688,7 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
     return { x: 50 + 42 * Math.cos(rad), y: 50 + 42 * Math.sin(rad) };
   }
 
-  const handlePresence = useCallback(id => {
-    if (bodyConfig.type !== 'plenum') {
-      const pair = bodyConfig.seatPairs.find(p => p.substitute === id);
-      if (pair) { dispatch({ type: 'CYCLE_SEAT', seatKey: pair.regular, bodyConfig, memberLookup }); return; }
-    }
-    dispatch({ type: 'CYCLE_SEAT', seatKey: id, bodyConfig, memberLookup });
-  }, [bodyConfig, dispatch, memberLookup]);
+  const handlePresence = usePresenceToggle(bodyConfig, dispatch, memberLookup);
 
   const handleVote = useCallback(id => {
     dispatch({ type: 'CAST_VOTE', memberId: id });
@@ -564,7 +705,7 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
         const lbl = getLabelPlacement(x, y);
         return (
           <div key={m.id} className="absolute" style={{ left: x + '%', top: y + '%', transform: 'translate(-50%, -50%)' }}>
-            <SeatCircle member={m} partyColor={party.color} seatInfo={info} isChair={false}
+            <SeatCircle member={m} partyColor={party.color} seatInfo={info}
               voting={voting} voteValue={currentVote?.votes[m.id]} labelPlacement={lbl}
               onPresence={handlePresence} onVote={handleVote} />
           </div>
@@ -577,7 +718,7 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
         const mp = slotToPos(0);
         return (
           <div className="absolute" style={{ left: mp.x + '%', top: mp.y + '%', transform: 'translate(-50%, -50%)' }}>
-            <SeatCircle member={mayor} partyColor={party.color} seatInfo={info} isChair
+            <SeatCircle member={mayor} partyColor={party.color} seatInfo={info}
               voting={voting} voteValue={currentVote?.votes[mayor.id]} labelPlacement="below"
               onPresence={handlePresence} onVote={handleVote} />
           </div>
@@ -611,7 +752,7 @@ function CenterStats({ seatStates, bodyConfig, currentVote }) {
           {absent > 0 && <>
             <div className="w-12 h-px bg-brd mx-auto my-1"></div>
             <div className="text-lg font-bold text-absent">{absent}</div>
-            <div className="text-[10px] text-tx-m">Abwesend</div>
+            <div className="text-xs text-tx-m">Abwesend</div>
           </>}
         </div>
       </div>
@@ -636,40 +777,42 @@ function MemberCard({ member, partyColor, partyName, seatInfo, voting, voteValue
   const isInVote = voting && voteValue !== undefined;
   const isAbsentInVote = voting && voteValue === 'absent';
   const roleText = getMemberRoleText(member, bodyConfig, seatInfo);
-  const borderColor = !eligible ? '#ddd' : !active && !isInVote ? '#ccc' : partyColor;
-  const opacity = (!eligible || (!active && !voting) || isAbsentInVote) ? 'opacity-50' : '';
+  const dimmed = (!eligible || (!active && !voting) || isAbsentInVote) ? 'opacity-55' : '';
+  const fullName = member.firstName + ' ' + member.lastName;
 
   return (
-    <div className={'bg-surface rounded-lg border-l-4 shadow-card p-3 transition-all hover:shadow-card-lg ' + opacity +
-      (eligible ? ' cursor-pointer' : ' pointer-events-none')}
-      style={{ borderLeftColor: borderColor }}
-      onClick={() => { if (eligible) onPresence(member.id); }}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm truncate">{member.firstName} {member.lastName}</div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: partyColor }}></span>
-            <span className="text-xs text-tx-m truncate">{partyName}</span>
-          </div>
-          <div className="text-[11px] text-tx-m mt-0.5">{roleText}</div>
+    <div className={'relative bg-surface rounded-lg border border-brd ' + dimmed}>
+      <button type="button" disabled={!eligible}
+        className="card-btn w-full text-left p-3 pr-14 disabled:cursor-default"
+        onClick={() => onPresence(member.id)}
+        aria-pressed={eligible ? active : undefined}
+        aria-label={fullName + ' – ' + (active ? 'anwesend' : 'abwesend')}>
+        <div className="t-strong truncate">{fullName}</div>
+        <div className="flex items-center gap-1.5 mt-1 t-meta text-tx-m">
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: partyColor }}></span>
+          <span className="truncate">{partyName}</span>
+          <span aria-hidden="true">·</span>
+          <span className="truncate">{roleText}</span>
         </div>
-        <div className="flex-shrink-0">
-          {voting && isInVote && !isAbsentInVote && (
-            <div className={'vote-indicator flex items-center justify-center rounded w-8 h-8 ' +
+      </button>
+      <div className="absolute top-1/2 right-3 -translate-y-1/2">
+        {voting && isInVote && !isAbsentInVote && (
+          <button type="button"
+            className={'vote-indicator flex items-center justify-center rounded w-8 h-8 ' +
               (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')}
-              onClick={e => { e.stopPropagation(); onVote(member.id); }}>
-              <span className="text-white font-bold text-sm">{voteValue === 'yes' ? '✓' : '✗'}</span>
-            </div>
-          )}
-          {voting && isAbsentInVote && (
-            <div className="flex items-center justify-center rounded w-8 h-8 bg-absent">
-              <span className="text-white font-bold text-sm">—</span>
-            </div>
-          )}
-          {!voting && eligible && (
-            <div className={'w-3 h-3 rounded-full ' + (active ? 'bg-vote-yes' : 'bg-absent')}></div>
-          )}
-        </div>
+            onClick={() => onVote(member.id)}
+            aria-label={fullName + ' – Stimme ' + (voteValue === 'yes' ? 'Ja' : 'Nein') + ', klicken zum Wechseln'}>
+            <span className="text-white font-bold t-body">{voteValue === 'yes' ? '✓' : '✗'}</span>
+          </button>
+        )}
+        {voting && isAbsentInVote && (
+          <span className="flex items-center justify-center rounded w-8 h-8 bg-absent" title={fullName + ' – abwesend'}>
+            <span className="text-white font-bold t-body">—</span>
+          </span>
+        )}
+        {!voting && eligible && (
+          <span className={'block w-3 h-3 rounded-full ' + (active ? 'bg-vote-yes' : 'bg-absent')}></span>
+        )}
       </div>
     </div>
   );
@@ -678,13 +821,7 @@ function MemberCard({ member, partyColor, partyName, seatInfo, voting, voteValue
 function MemberCards({ allMembers, bodyConfig, seatStates, currentVote, dispatch, data, memberLookup }) {
   const voting = !!currentVote;
 
-  const handlePresence = useCallback(id => {
-    if (bodyConfig.type !== 'plenum') {
-      const pair = bodyConfig.seatPairs.find(p => p.substitute === id);
-      if (pair) { dispatch({ type: 'CYCLE_SEAT', seatKey: pair.regular, bodyConfig, memberLookup }); return; }
-    }
-    dispatch({ type: 'CYCLE_SEAT', seatKey: id, bodyConfig, memberLookup });
-  }, [bodyConfig, dispatch, memberLookup]);
+  const handlePresence = usePresenceToggle(bodyConfig, dispatch, memberLookup);
 
   const handleVote = useCallback(id => {
     dispatch({ type: 'CAST_VOTE', memberId: id });
@@ -710,18 +847,15 @@ function MemberCards({ allMembers, bodyConfig, seatStates, currentVote, dispatch
 
 /* ── Vote Panel ───────────────────────────────────────── */
 
-function VotePanel({ currentVote, session, presentIds, dispatch, agenda, activeMembers }) {
-  const [showConfirm, setShowConfirm] = useState(false);
+function VotePanel({ currentVote, session, dispatch, agenda, startVote, showConfirm, onRequestConfirm, onCancelConfirm }) {
   if (session.status !== 'active' && session.status !== 'paused') return null;
 
   if (!currentVote) {
-    const memberNames = {};
-    activeMembers.forEach(m => { memberNames[m.id] = m.lastName + ', ' + m.firstName; });
     return (
-      <div className="bg-surface rounded-lg border border-brd shadow-card p-4">
+      <div className="bg-surface rounded-lg border border-brd p-4">
         <button className="w-full py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-colors"
-          onClick={() => dispatch({ type: 'START_VOTE', presentIds: [...presentIds], memberNames })}>
-          Neue Abstimmung
+          onClick={() => startVote()}>
+          Neue Abstimmung <kbd className="ml-1 align-middle">A</kbd>
         </button>
       </div>
     );
@@ -733,8 +867,8 @@ function VotePanel({ currentVote, session, presentIds, dispatch, agenda, activeM
   const voting = yes + no;
 
   return (
-    <div className="bg-surface rounded-lg border border-brd shadow-card p-4 space-y-3">
-      <h3 className="font-serif font-bold text-primary-dark uppercase text-xs tracking-wider">Abstimmung</h3>
+    <div className="bg-surface rounded-lg border border-brd p-4 space-y-3">
+      <h3 className="panel-title">Abstimmung</h3>
       <input type="text" placeholder="Titel der Abstimmung *" value={currentVote.title}
         onChange={e => dispatch({ type: 'UPDATE_VOTE', fields: { title: e.target.value } })}
         className="w-full border border-brd rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none" />
@@ -747,9 +881,9 @@ function VotePanel({ currentVote, session, presentIds, dispatch, agenda, activeM
         className="w-full border border-brd rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-primary focus:outline-none" />
       <div className="flex gap-2">
         <button className="flex-1 py-2 bg-vote-yes text-white rounded-lg font-bold text-sm hover:opacity-90"
-          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'yes' })}>Alle Ja</button>
+          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'yes' })}>Alle Ja <kbd className="ml-1 align-middle">J</kbd></button>
         <button className="flex-1 py-2 bg-vote-no text-white rounded-lg font-bold text-sm hover:opacity-90"
-          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no' })}>Alle Nein</button>
+          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no' })}>Alle Nein <kbd className="ml-1 align-middle">N</kbd></button>
       </div>
       <div className="text-center text-sm space-x-2">
         <span className="text-vote-yes font-bold">{yes} Ja</span>
@@ -759,18 +893,18 @@ function VotePanel({ currentVote, session, presentIds, dispatch, agenda, activeM
         <span className="text-tx-m">|</span>
         <span className="text-tx-m">{voting} Stimmberechtigte</span>
       </div>
-      <p className="text-[10px] text-tx-m text-center">Kreis/Karte = Anwesenheit, Quadrat = Ja/Nein</p>
+      <p className="text-xs text-tx-m text-center">Kreis/Karte = Anwesenheit, Quadrat = Ja/Nein</p>
       <div className="flex gap-2">
         <button className="flex-1 py-2 bg-gray-200 text-tx rounded-lg font-semibold text-sm hover:bg-gray-300"
           onClick={() => dispatch({ type: 'CANCEL_VOTE' })}>Abbrechen</button>
         <button className="flex-1 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark disabled:opacity-40"
-          disabled={!currentVote.title.trim()} onClick={() => setShowConfirm(true)}>Speichern</button>
+          disabled={!currentVote.title.trim()} onClick={onRequestConfirm}>Speichern</button>
       </div>
       {showConfirm && (
         <VoteConfirmModal vote={currentVote} yes={yes} no={no} absent={absent} voting={voting}
           passed={yes > no}
-          onConfirm={() => { setShowConfirm(false); dispatch({ type: 'CONFIRM_VOTE' }); }}
-          onCancel={() => setShowConfirm(false)} />
+          onConfirm={() => { onCancelConfirm(); dispatch({ type: 'CONFIRM_VOTE' }); }}
+          onCancel={onCancelConfirm} />
       )}
     </div>
   );
@@ -802,7 +936,7 @@ function VoteConfirmModal({ vote, yes, no, absent, voting, passed, onConfirm, on
 }
 
 /* ── Agenda ────────────────────────────────────────────── */
-function AgendaPanel({ agenda, dispatch }) {
+function AgendaPanel({ agenda, dispatch, startVote, canStartVote, votedItems }) {
   const [val, setVal] = useState('');
   const submit = () => {
     const titles = val.split('\n').map(s => s.trim()).filter(Boolean);
@@ -811,8 +945,8 @@ function AgendaPanel({ agenda, dispatch }) {
     setVal('');
   };
   return (
-    <div className="bg-surface rounded-lg border border-brd shadow-card p-4">
-      <h3 className="font-serif font-bold text-primary-dark uppercase text-xs tracking-wider mb-2">Tagesordnung</h3>
+    <div className="bg-surface rounded-lg border border-brd p-4">
+      <h3 className="panel-title mb-2">Tagesordnung</h3>
       <div className="flex gap-2 mb-1">
         <textarea value={val} placeholder="Neuer TOP… (Enter = hinzufügen, Shift+Enter = neue Zeile)" rows={1}
           onChange={e => setVal(e.target.value)}
@@ -821,15 +955,31 @@ function AgendaPanel({ agenda, dispatch }) {
         <button className="px-3 py-1.5 bg-accent-light rounded-lg text-sm font-semibold hover:bg-accent/30 self-start"
           onClick={submit}>+</button>
       </div>
-      <p className="text-[10px] text-tx-m mb-2">Mehrere Zeilen = mehrere TOPs auf einmal.</p>
-      <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">
-        {agenda.map(a => (
-          <li key={a.id} className="flex items-center justify-between group">
-            <span>{a.title}</span>
-            <button className="text-tx-m hover:text-vote-no opacity-0 group-hover:opacity-100 text-xs"
-              onClick={() => dispatch({ type: 'REMOVE_AGENDA', id: a.id })}>&times;</button>
-          </li>
-        ))}
+      <p className="text-xs text-tx-m mb-2">
+        {canStartVote
+          ? 'TOP anklicken startet eine Abstimmung dazu.'
+          : 'Mehrere Zeilen = mehrere TOPs auf einmal.'}
+      </p>
+      <ul className="space-y-0.5 t-body max-h-56 overflow-y-auto">
+        {agenda.map(a => {
+          const voted = votedItems.has(a.title);
+          return (
+            <li key={a.id} className="flex items-start gap-1 group">
+              <button type="button" disabled={!canStartVote}
+                className={'agenda-btn flex-1 text-left rounded px-1.5 py-1 -ml-1.5 ' +
+                  (canStartVote ? 'hover:bg-accent-light cursor-pointer' : 'cursor-default') +
+                  (voted ? ' text-tx-m' : '')}
+                onClick={() => startVote(a.title)}
+                title={canStartVote ? 'Abstimmung zu diesem TOP starten' : undefined}>
+                {voted && <span className="text-vote-yes mr-1" aria-label="bereits abgestimmt">✓</span>}
+                {a.title}
+              </button>
+              <button className="text-tx-m hover:text-vote-no opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs px-1 pt-1.5"
+                aria-label={'TOP entfernen: ' + a.title}
+                onClick={() => dispatch({ type: 'REMOVE_AGENDA', id: a.id })}>&times;</button>
+            </li>
+          );
+        })}
         {agenda.length === 0 && <li className="text-tx-m italic">Keine Einträge</li>}
       </ul>
     </div>
@@ -842,7 +992,7 @@ function ProtocolLog({ log, state, bodyName, dispatch }) {
   if (log.length === 0) return null;
 
   return (
-    <div className="bg-surface rounded-lg border border-brd shadow-card p-4">
+    <div className="bg-surface rounded-lg border border-brd p-4">
       <div className="flex gap-4 mb-3 border-b border-brd">
         <button className={'pb-2 text-sm ' + (tab === 'human' ? 'tab-active' : 'tab-inactive')}
           onClick={() => setTab('human')}>Protokoll</button>
@@ -866,7 +1016,7 @@ function HumanProtocol({ log, state, bodyName }) {
     <div className="space-y-4 text-sm max-h-96 overflow-y-auto">
       {startEntry && startEntry.payload && (
         <div>
-          <h4 className="font-semibold text-xs uppercase tracking-wider text-primary-dark mb-1">
+          <h4 className="panel-title mb-1">
             Anwesenheit zu Beginn ({fmtTime(startEntry.timestamp)})
           </h4>
           <p className="text-vote-yes">
@@ -882,32 +1032,14 @@ function HumanProtocol({ log, state, bodyName }) {
         </div>
       )}
       <div>
-        <h4 className="font-semibold text-xs uppercase tracking-wider text-primary-dark mb-1">Verlauf</h4>
+        <h4 className="panel-title mb-1">Verlauf</h4>
         <div className="space-y-1">
           {log.map(entry => {
-            if (entry.type === 'session_start') return null;
-            let text = '';
-            if (entry.type === 'presence_change' && entry.payload) {
-              const p = entry.payload;
-              text = p.newState === 'present'
-                ? p.memberName + ' ist der Sitzung beigetreten'
-                : p.memberName + ' hat die Sitzung verlassen';
-            } else if (entry.type === 'vote' && entry.payload) {
-              const v = entry.payload;
-              text = 'Abstimmung: ' + v.title;
-              if (v.agendaItem) text += ' (' + v.agendaItem + ')';
-              text += ' – ' + (v.result.passed ? 'angenommen' : 'abgelehnt') +
-                ' (' + v.result.yes + ' Ja, ' + v.result.no + ' Nein' +
-                (v.result.absent ? ', ' + v.result.absent + ' Abwesend' : '') + ')';
-            } else if (entry.type === 'session_end') { text = 'Sitzung beendet'; }
-            else if (entry.type === 'session_pause') { text = 'Sitzung unterbrochen'; }
-            else if (entry.type === 'session_resume') { text = 'Sitzung fortgesetzt'; }
-            else if (entry.type === 'session_public') { text = 'Öffentlicher Teil'; }
-            else if (entry.type === 'session_nonpublic') { text = 'Nichtöffentlicher Teil'; }
-            else return null;
+            const text = logEntryText(entry);
+            if (!text) return null;
             return (
               <div key={entry.id} className="flex gap-2 log-enter">
-                <span className="text-tx-m whitespace-nowrap">{fmtTime(entry.timestamp)}</span>
+                <span className="text-tx-m whitespace-nowrap tabular-nums">{fmtTime(entry.timestamp)}</span>
                 <span>{text}</span>
               </div>
             );
@@ -933,12 +1065,12 @@ function LogEntryRow({ entry, dispatch }) {
   return (
     <div className="log-enter flex gap-3 items-start text-sm border-b border-brd/50 pb-2">
       <span className="text-tx-m text-xs whitespace-nowrap pt-0.5">{fmtTime(entry.timestamp)}</span>
-      <span className={'text-[10px] uppercase font-bold px-2 py-0.5 rounded text-white ' + (typeColors[entry.type] || 'bg-gray-400')}>
+      <span className={'text-xs uppercase font-bold px-2 py-0.5 rounded text-white ' + (typeColors[entry.type] || 'bg-gray-400')}>
         {typeLabels[entry.type] || entry.type}
       </span>
       <div className="flex-1">
         <span>{entry.message}</span>
-        {entry.mode && <span className="text-[9px] text-tx-m ml-1">[{entry.mode === 'public' ? 'öff.' : 'n.öff.'}]</span>}
+        {entry.mode && <span className="text-xs text-tx-m ml-1">[{entry.mode === 'public' ? 'öff.' : 'n.öff.'}]</span>}
         {entry.comment && !editing && (
           <p className="text-tx-m text-xs italic mt-0.5 cursor-pointer" onClick={() => setEditing(true)}>
             Kommentar: {entry.comment}
@@ -953,7 +1085,7 @@ function LogEntryRow({ entry, dispatch }) {
             }}>OK</button>
           </div>
         ) : (
-          <button className="text-[10px] text-tx-m hover:text-primary ml-2" onClick={() => setEditing(true)}>[Kommentar]</button>
+          <button className="text-xs text-tx-m hover:text-primary ml-2" onClick={() => setEditing(true)}>[Kommentar]</button>
         )}
       </div>
     </div>
@@ -1006,38 +1138,15 @@ function ExportPanel({ state, activeMembers, memberLookup, bodyName, onDownloade
 
   const doZip = async () => {
     try {
-      const zip = new JSZip();
-      // Protocol TXT
-      zip.file('protokoll.txt', generateHumanProtocol(state, bodyName));
-
-      // Presence data (shared)
-      const presenceData = buildPresenceJSON(state, memberLookup);
-
-      // Split votes by mode
-      const publicVotes = state.votes.filter(v => v.mode === 'public').map(v => buildVoteJSON(v, state.presenceHistory));
-      const nonpublicVotes = state.votes.filter(v => v.mode === 'nonpublic').map(v => buildVoteJSON(v, state.presenceHistory));
-
-      const base = {
-        sitzung: { titel: state.session.title, datum: state.session.date,
-          ort: state.session.location, gremium: bodyName },
-        anwesenheit: presenceData,
-      };
-
-      zip.file('oeffentlich.json', JSON.stringify({ ...base, teil: 'öffentlich', abstimmungen: publicVotes }, null, 2));
-      zip.file('nichtoeffentlich.json', JSON.stringify({ ...base, teil: 'nichtöffentlich', abstimmungen: nonpublicVotes }, null, 2));
-
-      const blob = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'protokoll-' + state.session.date + '_' + state.bodyId + '.zip'; a.click();
-      URL.revokeObjectURL(url);
+      const blob = await buildZipBlob(state, memberLookup, bodyName);
+      downloadBlob(blob, 'protokoll-' + state.session.date + '_' + state.bodyId + '.zip');
       if (onDownloaded) onDownloaded();
     } catch (e) { console.error('ZIP export failed', e); }
   };
 
   return (
-    <div className="bg-surface rounded-lg border border-brd shadow-card p-4">
-      <h3 className="font-serif font-bold text-primary-dark uppercase text-xs tracking-wider mb-2">Export</h3>
+    <div className="bg-surface rounded-lg border border-brd p-4">
+      <h3 className="panel-title mb-2">Export</h3>
       <div className="space-y-2">
         <button className="w-full py-2.5 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-colors"
           onClick={doZip}>ZIP-Paket herunterladen</button>
@@ -1078,8 +1187,8 @@ function PartyLegend({ councillors, data }) {
 function SessionInfoEditor({ session, dispatch }) {
   if (session.status !== 'idle') return null;
   return (
-    <div className="bg-surface rounded-lg border border-brd shadow-card p-4 space-y-2">
-      <h3 className="font-serif font-bold text-primary-dark uppercase text-xs tracking-wider">Sitzungsdetails</h3>
+    <div className="bg-surface rounded-lg border border-brd p-4 space-y-2">
+      <h3 className="panel-title">Sitzungsdetails</h3>
       <input type="text" value={session.title} placeholder="Titel"
         onChange={e => dispatch({ type: 'UPDATE_SESSION', fields: { title: e.target.value } })}
         className="w-full border border-brd rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none" />
@@ -1119,19 +1228,9 @@ function RecoveryModal({ recoveryData, onDismiss }) {
           <button className="w-full py-2.5 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark"
             onClick={() => doDownload(async () => {
               try {
-                const zip = new JSZip();
-                zip.file('protokoll.txt', generateHumanProtocol(state, bodyName));
-                const presenceData = buildPresenceJSON(state, memberLookup);
-                const base = { sitzung: { titel: state.session.title, datum: state.session.date, ort: state.session.location, gremium: bodyName }, anwesenheit: presenceData };
-                const pubV = state.votes.filter(v => v.mode === 'public').map(v => buildVoteJSON(v, state.presenceHistory));
-                const npV = state.votes.filter(v => v.mode === 'nonpublic').map(v => buildVoteJSON(v, state.presenceHistory));
-                zip.file('oeffentlich.json', JSON.stringify({ ...base, teil: 'öffentlich', abstimmungen: pubV }, null, 2));
-                zip.file('nichtoeffentlich.json', JSON.stringify({ ...base, teil: 'nichtöffentlich', abstimmungen: npV }, null, 2));
-                const blob = await zip.generateAsync({ type: 'blob' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'protokoll-' + state.session.date + '.zip'; a.click();
-                URL.revokeObjectURL(url);
-              } catch (e) { console.error(e); }
+                const blob = await buildZipBlob(state, memberLookup, bodyName);
+                downloadBlob(blob, 'protokoll-' + state.session.date + '.zip');
+              } catch (e) { console.error('ZIP export failed', e); }
             })}>ZIP-Paket herunterladen</button>
           <div className="flex gap-2">
             <button className="flex-1 py-1.5 bg-accent-light rounded-lg text-xs font-semibold hover:bg-accent/30"
@@ -1153,6 +1252,68 @@ function RecoveryModal({ recoveryData, onDismiss }) {
   );
 }
 
+/* ── Keyboard help ────────────────────────────────────── */
+function ShortcutHelp({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-surface rounded-xl shadow-card-lg p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+        <h3 className="font-serif font-bold t-display text-primary-dark mb-4">Tastaturkürzel</h3>
+        <dl className="space-y-2.5">
+          {SHORTCUTS.map(s => (
+            <div key={s.key} className="flex items-baseline gap-3">
+              <dt className="w-14 flex-shrink-0"><kbd>{s.key}</kbd></dt>
+              <dd className="t-body">{s.label}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="t-meta text-tx-m mt-4">Buchstabenkürzel pausieren, solange ein Textfeld aktiv ist.</p>
+        <button className="w-full mt-4 py-2 bg-primary text-white rounded-lg font-bold t-body" onClick={onClose}>Schließen</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Demo tour ────────────────────────────────────────── */
+function DemoBanner({ state }) {
+  const stepIndex = DEMO_STEPS.findIndex(s => !s.done(state));
+  const current = stepIndex === -1 ? null : DEMO_STEPS[stepIndex];
+
+  return (
+    <div className="bg-accent-light border-b border-brd">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-start gap-x-6 gap-y-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <span className="panel-title">Demo</span>
+          <div className="flex gap-1" aria-hidden="true">
+            {DEMO_STEPS.map((s, i) => (
+              <span key={i} className={'block w-4 h-1.5 rounded-full ' +
+                (s.done(state) ? 'bg-primary' : i === stepIndex ? 'bg-primary/40' : 'bg-black/10')} />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 min-w-[15rem]">
+          {current ? (
+            <>
+              <p className="t-strong">Schritt {stepIndex + 1} von {DEMO_STEPS.length}: {current.title}</p>
+              <p className="t-meta text-tx-m protocol-measure">{current.hint}</p>
+            </>
+          ) : (
+            <>
+              <p className="t-strong">Alle Schritte durchlaufen.</p>
+              <p className="t-meta text-tx-m">Protokoll und Export unten enthalten den kompletten Sitzungsverlauf.</p>
+            </>
+          )}
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          <button className="px-3 py-1.5 rounded-lg t-meta font-semibold bg-surface border border-brd hover:bg-white"
+            onClick={() => location.reload()}>Neu starten</button>
+          <a className="px-3 py-1.5 rounded-lg t-meta font-semibold bg-surface border border-brd hover:bg-white"
+            href="index.html">Demo verlassen</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── App ──────────────────────────────────────────────── */
 function App() {
   const [data, setData] = useState(null);
@@ -1160,10 +1321,15 @@ function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const today = useMemo(() => new Date(), []);
 
-  // Recovery check
+  const [showHelp, setShowHelp] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Recovery check — never in demo mode, which must not read or write
+  // the real session's backup slot.
   const [recoveryData, setRecoveryData] = useState(() => {
+    if (DEMO_MODE) return null;
     try {
-      const saved = localStorage.getItem('council-session-backup');
+      const saved = localStorage.getItem(BACKUP_KEY);
       return saved ? JSON.parse(saved) : null;
     } catch (e) { return null; }
   });
@@ -1221,9 +1387,10 @@ function App() {
 
   // Backup to localStorage during active session
   useEffect(() => {
+    if (DEMO_MODE) return;
     if (state.session.status === 'active' || state.session.status === 'paused' || state.session.status === 'ended') {
       try {
-        localStorage.setItem('council-session-backup', JSON.stringify({
+        localStorage.setItem(BACKUP_KEY, JSON.stringify({
           state, memberLookup, bodyName, activeMembers: activeMembers.map(m => ({ id: m.id, firstName: m.firstName, lastName: m.lastName, currentParty: m.currentParty })),
         }));
       } catch (e) {}
@@ -1231,6 +1398,38 @@ function App() {
   }, [state]);
 
   const handleDownloaded = useCallback(() => { clearBackup(); }, []);
+
+  /* ── Vote start + keyboard ─── */
+  const sessionLive = state.session.status === 'active' || state.session.status === 'paused';
+
+  const startVote = useCallback(agendaItem => {
+    const memberNames = {};
+    activeMembers.forEach(m => { memberNames[m.id] = m.lastName + ', ' + m.firstName; });
+    dispatch({ type: 'START_VOTE', presentIds: [...presentIds], memberNames, agendaItem: agendaItem || '' });
+  }, [activeMembers, presentIds]);
+
+  // TOPs that already carry a recorded vote, so the agenda can show progress.
+  const votedItems = useMemo(
+    () => new Set(state.votes.map(v => v.agendaItem).filter(Boolean)),
+    [state.votes]
+  );
+
+  useHotkeys({
+    onHelp: () => setShowHelp(v => !v),
+    onNewVote: () => { if (sessionLive && !state.currentVote) startVote(); },
+    onBulkYes: () => { if (sessionLive && state.currentVote) dispatch({ type: 'BULK_VOTE', value: 'yes' }); },
+    onBulkNo:  () => { if (sessionLive && state.currentVote) dispatch({ type: 'BULK_VOTE', value: 'no' }); },
+    onSave: () => {
+      if (showConfirm || !state.currentVote || !state.currentVote.title.trim()) return false;
+      setShowConfirm(true);
+      return true;
+    },
+    onCancel: () => {
+      if (showHelp) { setShowHelp(false); return; }
+      if (showConfirm) { setShowConfirm(false); return; }
+      if (state.currentVote) dispatch({ type: 'CANCEL_VOTE' });
+    },
+  });
 
   /* ── Loading / Error / Recovery states ─── */
   if (loadError) return (
@@ -1255,9 +1454,12 @@ function App() {
   return (
     <div className="min-h-screen">
       {recoveryData && <RecoveryModal recoveryData={recoveryData} onDismiss={() => setRecoveryData(null)} />}
+      {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
 
       <SessionHeader session={state.session} bodyId={state.bodyId} bodies={data.bodies}
-        dispatch={dispatch} bodyConfig={bodyConfig} memberLookup={memberLookup} />
+        dispatch={dispatch} bodyConfig={bodyConfig} memberLookup={memberLookup}
+        onShowHelp={() => setShowHelp(true)} />
+      {DEMO_MODE && <DemoBanner state={state} />}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Mobile: stacks in DOM order. Desktop: grid with sidebar spanning rows */}
@@ -1273,9 +1475,13 @@ function App() {
           {/* Sidebar: on mobile this comes between circle and cards */}
           <div className="space-y-4 lg:row-span-2">
             <SessionInfoEditor session={state.session} dispatch={dispatch} />
-            <AgendaPanel agenda={state.agenda} dispatch={dispatch} />
+            <AgendaPanel agenda={state.agenda} dispatch={dispatch} startVote={startVote}
+              canStartVote={sessionLive && !state.currentVote} votedItems={votedItems} />
             <VotePanel currentVote={state.currentVote} session={state.session}
-              presentIds={presentIds} dispatch={dispatch} agenda={state.agenda} activeMembers={activeMembers} />
+              dispatch={dispatch} agenda={state.agenda} startVote={startVote}
+              showConfirm={showConfirm}
+              onRequestConfirm={() => setShowConfirm(true)}
+              onCancelConfirm={() => setShowConfirm(false)} />
             {state.session.status === 'ended' && (
               <ExportPanel state={state} activeMembers={activeMembers} memberLookup={memberLookup}
                 bodyName={bodyName} onDownloaded={handleDownloaded} />
@@ -1284,7 +1490,7 @@ function App() {
 
           {/* Cards: on mobile after sidebar, on desktop below circle */}
           <div className="lg:col-span-2">
-            <h3 className="font-serif font-bold text-primary-dark uppercase text-xs tracking-wider mb-3">Mitglieder</h3>
+            <h3 className="panel-title mb-3">Mitglieder</h3>
             <MemberCards allMembers={activeMembers} bodyConfig={bodyConfig}
               seatStates={state.seatStates} currentVote={state.currentVote} dispatch={dispatch}
               data={data} memberLookup={memberLookup} />
