@@ -299,8 +299,14 @@ function reducer(state, action) {
     }
     case 'BULK_VOTE': {
       const cv = state.currentVote;
+      // Without memberIds this sets everyone; with it, only that subset —
+      // which is how the party buttons in the legend work.
+      const only = action.memberIds ? new Set(action.memberIds) : null;
       const nv = {};
-      Object.entries(cv.votes).forEach(([id, v]) => { nv[id] = v === 'absent' ? 'absent' : action.value; });
+      Object.entries(cv.votes).forEach(([id, v]) => {
+        if (v === 'absent') { nv[id] = 'absent'; return; }
+        nv[id] = (!only || only.has(id)) ? action.value : v;
+      });
       return { ...state, currentVote: { ...cv, votes: nv } };
     }
     case 'CONFIRM_VOTE': {
@@ -399,6 +405,31 @@ function classifyAbsence(memberId, voteTimestamp, presenceHistory) {
   const wasPresentBefore = h.some(e => e.state === 'present' && e.ts <= voteTimestamp);
   const wasPresentAfter = h.some(e => e.state === 'present' && e.ts > voteTimestamp);
   return (wasPresentBefore && wasPresentAfter) ? 'short' : 'general';
+}
+
+/* Two councillors can share a surname — Karin Linz (CSU) and Kilian Linz
+   (Grüne) both sit in this council, and plain initials render both as "KL".
+   Where a surname repeats, extend the label and the disc with the shortest
+   first-name prefix that tells them apart. */
+function buildSeatNames(members) {
+  const bySurname = {};
+  members.forEach(m => { (bySurname[m.lastName] = bySurname[m.lastName] || []).push(m); });
+
+  const out = {};
+  members.forEach(m => {
+    const group = bySurname[m.lastName];
+    if (group.length === 1) {
+      out[m.id] = { label: m.lastName, initials: m.firstName.charAt(0) + m.lastName.charAt(0) };
+      return;
+    }
+    const clashes = n => group.some(o =>
+      o.id !== m.id && o.firstName.slice(0, n).toLowerCase() === m.firstName.slice(0, n).toLowerCase());
+    let n = 1;
+    while (n < m.firstName.length && clashes(n)) n++;
+    const prefix = m.firstName.slice(0, n);
+    out[m.id] = { label: prefix + '. ' + m.lastName, initials: prefix + m.lastName.charAt(0) };
+  });
+  return out;
 }
 
 function getLabelPlacement(x, y) {
@@ -619,46 +650,52 @@ function SessionHeader({ session, bodyId, bodies, dispatch, bodyConfig, memberLo
 
 /* ── Council Circle ───────────────────────────────────── */
 
-function SeatCircle({ member, partyColor, seatInfo, voting, voteValue, onPresence, onVote, labelPlacement }) {
+function SeatCircle({ member, names, partyColor, seatInfo, voting, voteValue, onPresence, onVote, labelPlacement }) {
   const active = seatInfo.active;
   const eligible = seatInfo.eligible;
-  const isInVote = voting && voteValue !== undefined;
   const isAbsentInVote = voting && voteValue === 'absent';
-  const bg = !eligible ? '#DDDCD8' : (!active && !isInVote) ? '#CBCAC6' : isAbsentInVote ? '#CBCAC6' : partyColor;
-  const txt = !eligible ? '#8A8A87' : (!active && !isInVote) ? '#5F5F5C' : isAbsentInVote ? '#5F5F5C' : contrastText(partyColor);
-
-  const fullName = member.firstName + ' ' + member.lastName;
+  // While a vote is open the seat casts the vote — that is what nearly every
+  // click during a vote means. Presence moves to the member cards below.
+  const castsVote = voting && voteValue !== undefined && !isAbsentInVote;
   const isSub = seatInfo.role === 'substitute';
-  // Only clips beyond 14 chars, so no current council name is abbreviated.
-  const label = member.lastName.length > 14 ? member.lastName.substring(0, 13) + '.' : member.lastName;
+  const fullName = member.firstName + ' ' + member.lastName;
+  const label = names.label.length > 14 ? names.label.substring(0, 13) + '.' : names.label;
+
+  // Absent members of this body read as a gap in the ring: pushed outward by
+  // the parent, hollow, and dimmed — three redundant cues for one state.
+  const hollow = eligible && !active;
+  const style = !eligible
+    ? { backgroundColor: '#DDDCD8', color: '#8A8A87', border: 'none' }
+    : hollow
+      ? { backgroundColor: '#FFFFFF', color: '#6B6B68', border: (isSub ? '2px dashed ' : '2px solid ') + '#B9B8B3' }
+      : { backgroundColor: partyColor, color: contrastText(partyColor), border: isSub ? '2px dashed #5A5A57' : 'none' };
 
   return (
     <div className="relative inline-flex items-center justify-center">
-      <button type="button" disabled={!eligible}
-        className={'seat-node relative ' + (eligible ? '' : 'disabled ') + (!active && eligible && !voting ? 'absent-seat' : '')}
-        onClick={() => onPresence(member.id)}
-        aria-pressed={eligible ? active : undefined}
-        aria-label={fullName + (isSub ? ' (Vertretung)' : '') + ' – ' + (active ? 'anwesend' : 'abwesend')}
+      <button type="button" disabled={!eligible || (voting && !castsVote)}
+        className={'seat-node relative ' + (eligible ? '' : 'disabled ') + (hollow ? 'absent-seat' : '')}
+        onClick={() => (castsVote ? onVote(member.id) : onPresence(member.id))}
+        aria-pressed={castsVote ? voteValue === 'yes' : (eligible ? active : undefined)}
+        aria-label={castsVote
+          ? fullName + ' – Stimme ' + (voteValue === 'yes' ? 'Ja' : 'Nein') + ', klicken zum Wechseln'
+          : fullName + (isSub ? ' (Vertretung)' : '') + ' – ' + (active ? 'anwesend' : 'abwesend')}
         title={fullName + (isSub ? ' [Vertretung]' : '')}>
-        <span className="seat-circle rounded-full flex items-center justify-center font-bold shadow-card"
-          style={{ backgroundColor: bg, color: txt, border: isSub ? '2px dashed #5A5A57' : 'none' }}>
-          <span className="seat-initials">{member.firstName.charAt(0)}{member.lastName.charAt(0)}</span>
+        <span className={'seat-circle rounded-full flex items-center justify-center font-bold' + (hollow ? '' : ' shadow-card')}
+          style={style}>
+          <span className="seat-initials">{names.initials}</span>
         </span>
         <span className={'seat-label-outside lbl-' + (labelPlacement || 'above')}
           style={{ color: eligible ? '#2D2D2D' : '#8A8A87' }}>
           {label}
         </span>
       </button>
-      {voting && isInVote && !isAbsentInVote && (
-        <button type="button"
-          className={'vote-indicator vote-badge seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded ' +
-            (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')}
-          onClick={() => onVote(member.id)}
-          aria-label={fullName + ' – Stimme ' + (voteValue === 'yes' ? 'Ja' : 'Nein') + ', klicken zum Wechseln'}>
+      {castsVote && (
+        <span className={'vote-badge seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded ' +
+          (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')} aria-hidden="true">
           <span className="text-white font-bold">{voteValue === 'yes' ? '✓' : '✗'}</span>
-        </button>
+        </span>
       )}
-      {voting && isAbsentInVote && (
+      {isAbsentInVote && (
         <span className="seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded bg-absent"
           title={fullName + ' – abwesend'}>
           <span className="text-white font-bold">—</span>
@@ -668,7 +705,7 @@ function SeatCircle({ member, partyColor, seatInfo, voting, voteValue, onPresenc
   );
 }
 
-function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote, dispatch, data, memberLookup }) {
+function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote, dispatch, data, memberLookup, seatNames }) {
   // Reverse order so it's from the chair's perspective
   const ordered = useMemo(
     () => COUNCIL_DATA.buildSeatOrder(councillors, data.seatOrder, data.councilOrder).reverse(),
@@ -682,10 +719,15 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
   const MAX_COUNCIL_SLOTS = 24;
   const startSlot = 2 + Math.max(0, Math.floor((MAX_COUNCIL_SLOTS - n) / 2));
 
-  function slotToPos(slot) {
+  // Radii as a percentage of the container. Members of this body who are not
+  // present sit on the outer radius, so the ring shows a visible gap.
+  const R_SEATED = 41;
+  const R_AWAY = 46;
+
+  function slotToPos(slot, radius) {
     const deg = 90 - slot * SLOT_DEG;
     const rad = deg * Math.PI / 180;
-    return { x: 50 + 42 * Math.cos(rad), y: 50 + 42 * Math.sin(rad) };
+    return { x: 50 + radius * Math.cos(rad), y: 50 + radius * Math.sin(rad) };
   }
 
   const handlePresence = usePresenceToggle(bodyConfig, dispatch, memberLookup);
@@ -699,13 +741,17 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
   return (
     <div className="relative mx-auto council-circle-container" style={{ width: '100%', maxWidth: 640, aspectRatio: '1' }}>
       {ordered.map((m, i) => {
-        const { x, y } = slotToPos(startSlot + i);
         const info = getSeatInfo(m.id, bodyConfig, seatStates);
+        const away = info.eligible && !info.active;
+        const seated = slotToPos(startSlot + i, R_SEATED);
+        const pos = away ? slotToPos(startSlot + i, R_AWAY) : seated;
         const party = COUNCIL_DATA.getParty(data.parties, m.currentParty);
-        const lbl = getLabelPlacement(x, y);
+        // Placement comes from the seated position so a label never flips
+        // sides just because someone stepped out.
+        const lbl = getLabelPlacement(seated.x, seated.y);
         return (
-          <div key={m.id} className="absolute" style={{ left: x + '%', top: y + '%', transform: 'translate(-50%, -50%)' }}>
-            <SeatCircle member={m} partyColor={party.color} seatInfo={info}
+          <div key={m.id} className="seat-slot" style={{ left: pos.x + '%', top: pos.y + '%' }}>
+            <SeatCircle member={m} names={seatNames[m.id]} partyColor={party.color} seatInfo={info}
               voting={voting} voteValue={currentVote?.votes[m.id]} labelPlacement={lbl}
               onPresence={handlePresence} onVote={handleVote} />
           </div>
@@ -714,11 +760,12 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
 
       {mayor && (() => {
         const info = getSeatInfo(mayor.id, bodyConfig, seatStates);
+        const away = info.eligible && !info.active;
         const party = COUNCIL_DATA.getParty(data.parties, mayor.currentParty);
-        const mp = slotToPos(0);
+        const mp = slotToPos(0, away ? R_AWAY : R_SEATED);
         return (
-          <div className="absolute" style={{ left: mp.x + '%', top: mp.y + '%', transform: 'translate(-50%, -50%)' }}>
-            <SeatCircle member={mayor} partyColor={party.color} seatInfo={info}
+          <div className="seat-slot" style={{ left: mp.x + '%', top: mp.y + '%' }}>
+            <SeatCircle member={mayor} names={seatNames[mayor.id]} partyColor={party.color} seatInfo={info}
               voting={voting} voteValue={currentVote?.votes[mayor.id]} labelPlacement="below"
               onPresence={handlePresence} onVote={handleVote} />
           </div>
@@ -893,7 +940,9 @@ function VotePanel({ currentVote, session, dispatch, agenda, startVote, showConf
         <span className="text-tx-m">|</span>
         <span className="text-tx-m">{voting} Stimmberechtigte</span>
       </div>
-      <p className="text-xs text-tx-m text-center">Kreis/Karte = Anwesenheit, Quadrat = Ja/Nein</p>
+      <p className="text-xs text-tx-m text-center">
+        Sitz anklicken = Ja/Nein. Anwesenheit ändern über die Mitgliederkarten.
+      </p>
       <div className="flex gap-2">
         <button className="flex-1 py-2 bg-gray-200 text-tx rounded-lg font-semibold text-sm hover:bg-gray-300"
           onClick={() => dispatch({ type: 'CANCEL_VOTE' })}>Abbrechen</button>
@@ -1161,21 +1210,42 @@ function ExportPanel({ state, activeMembers, memberLookup, bodyName, onDownloade
 }
 
 /* ── Party Legend ──────────────────────────────────────── */
-function PartyLegend({ councillors, data }) {
+/* While a vote is open each party carries Ja/Nein buttons that set only the
+   present members of that party — absent members are left untouched. */
+function PartyLegend({ members, data, currentVote, partyOf, dispatch }) {
   const groups = {};
-  councillors.forEach(m => {
+  members.forEach(m => {
     if (!groups[m.currentParty]) groups[m.currentParty] = 0;
     groups[m.currentParty]++;
   });
+
+  const votersOf = pid => currentVote
+    ? Object.keys(currentVote.votes).filter(id => partyOf[id] === pid && currentVote.votes[id] !== 'absent')
+    : [];
+
   return (
     <div className="flex flex-wrap gap-2 justify-center">
       {Object.entries(groups).map(([pid, count]) => {
         const p = COUNCIL_DATA.getParty(data.parties, pid);
+        const ids = votersOf(pid);
         return (
-          <span key={pid} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
-            style={{ backgroundColor: p.color + '22', color: p.color, border: '1px solid ' + p.color + '44' }}>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }}></span>
-            {p.name} ({count})
+          <span key={pid} className="inline-flex items-center text-xs rounded-full overflow-hidden"
+            style={{ backgroundColor: p.color + '18', color: p.color, border: '1px solid ' + p.color + '44' }}>
+            <span className={'inline-flex items-center gap-1 py-0.5 pl-2 ' + (ids.length ? 'pr-1.5' : 'pr-2')}>
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }}></span>
+              {p.name} ({count})
+            </span>
+            {ids.length > 0 && (
+              <span className="inline-flex border-l" style={{ borderColor: p.color + '44' }}>
+                <button type="button" className="px-2 py-0.5 font-semibold hover:bg-vote-yes hover:text-white"
+                  onClick={() => dispatch({ type: 'BULK_VOTE', value: 'yes', memberIds: ids })}
+                  title={p.name + ': alle Anwesenden auf Ja (' + ids.length + ')'}>Ja</button>
+                <button type="button" className="px-2 py-0.5 font-semibold hover:bg-vote-no hover:text-white border-l"
+                  style={{ borderColor: p.color + '44' }}
+                  onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no', memberIds: ids })}
+                  title={p.name + ': alle Anwesenden auf Nein (' + ids.length + ')'}>Nein</button>
+              </span>
+            )}
           </span>
         );
       })}
@@ -1267,7 +1337,20 @@ function ShortcutHelp({ onClose }) {
           ))}
         </dl>
         <p className="t-meta text-tx-m mt-4">Buchstabenkürzel pausieren, solange ein Textfeld aktiv ist.</p>
-        <button className="w-full mt-4 py-2 bg-primary text-white rounded-lg font-bold t-body" onClick={onClose}>Schließen</button>
+
+        <h4 className="panel-title mt-5 mb-2">Klicken</h4>
+        <dl className="space-y-2 t-meta">
+          <div className="flex gap-3"><dt className="w-28 flex-shrink-0 text-tx-m">Sitz</dt>
+            <dd>Anwesenheit — während einer Abstimmung Ja/Nein</dd></div>
+          <div className="flex gap-3"><dt className="w-28 flex-shrink-0 text-tx-m">Mitgliederkarte</dt>
+            <dd>Anwesenheit, auch während einer Abstimmung</dd></div>
+          <div className="flex gap-3"><dt className="w-28 flex-shrink-0 text-tx-m">Partei-Chip</dt>
+            <dd>Ja/Nein für alle anwesenden Mitglieder dieser Partei</dd></div>
+          <div className="flex gap-3"><dt className="w-28 flex-shrink-0 text-tx-m">TOP</dt>
+            <dd>Startet eine Abstimmung zu diesem Punkt</dd></div>
+        </dl>
+
+        <button className="w-full mt-5 py-2 bg-primary text-white rounded-lg font-bold t-body" onClick={onClose}>Schließen</button>
       </div>
     </div>
   );
@@ -1352,6 +1435,14 @@ function App() {
     return m;
   }, [activeMembers]);
 
+  const seatNames = useMemo(() => buildSeatNames(activeMembers), [activeMembers]);
+
+  const partyOf = useMemo(() => {
+    const m = {};
+    activeMembers.forEach(member => { m[member.id] = member.currentParty; });
+    return m;
+  }, [activeMembers]);
+
   const bodyDef = useMemo(() => data ? data.bodies.find(b => b.id === state.bodyId) : null, [data, state.bodyId]);
   const bodyConfig = useMemo(() => bodyDef ? COUNCIL_DATA.getBodyConfig(bodyDef, activeMembers) : null, [bodyDef, activeMembers]);
   const bodyName = bodyDef ? bodyDef.name : state.bodyId;
@@ -1414,11 +1505,32 @@ function App() {
     [state.votes]
   );
 
+  /* A shortcut that silently does nothing reads as a broken shortcut, so say
+     why it did not apply. */
+  const [hint, setHint] = useState(null);
+  const hintTimer = useRef(null);
+  const showHint = useCallback(msg => {
+    setHint(msg);
+    clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(null), 2600);
+  }, []);
+  useEffect(() => () => clearTimeout(hintTimer.current), []);
+
+  const bulk = value => {
+    if (!sessionLive) return showHint('Erst die Sitzung eröffnen.');
+    if (!state.currentVote) return showHint('Keine Abstimmung offen — mit A starten.');
+    dispatch({ type: 'BULK_VOTE', value });
+  };
+
   useHotkeys({
     onHelp: () => setShowHelp(v => !v),
-    onNewVote: () => { if (sessionLive && !state.currentVote) startVote(); },
-    onBulkYes: () => { if (sessionLive && state.currentVote) dispatch({ type: 'BULK_VOTE', value: 'yes' }); },
-    onBulkNo:  () => { if (sessionLive && state.currentVote) dispatch({ type: 'BULK_VOTE', value: 'no' }); },
+    onNewVote: () => {
+      if (!sessionLive) return showHint('Erst die Sitzung eröffnen.');
+      if (state.currentVote) return showHint('Es läuft bereits eine Abstimmung.');
+      startVote();
+    },
+    onBulkYes: () => bulk('yes'),
+    onBulkNo:  () => bulk('no'),
     onSave: () => {
       if (showConfirm || !state.currentVote || !state.currentVote.title.trim()) return false;
       setShowConfirm(true);
@@ -1455,6 +1567,10 @@ function App() {
     <div className="min-h-screen">
       {recoveryData && <RecoveryModal recoveryData={recoveryData} onDismiss={() => setRecoveryData(null)} />}
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
+      {hint && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-tx text-white t-meta px-4 py-2 rounded-lg shadow-card-lg"
+          role="status">{hint}</div>
+      )}
 
       <SessionHeader session={state.session} bodyId={state.bodyId} bodies={data.bodies}
         dispatch={dispatch} bodyConfig={bodyConfig} memberLookup={memberLookup}
@@ -1466,10 +1582,11 @@ function App() {
         <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
           {/* Circle */}
           <div className="lg:col-span-2 space-y-3">
-            <PartyLegend councillors={councillors} data={data} />
+            <PartyLegend members={activeMembers} data={data} currentVote={state.currentVote}
+              partyOf={partyOf} dispatch={dispatch} />
             <CouncilCircle councillors={councillors} mayor={mayor} bodyConfig={bodyConfig}
               seatStates={state.seatStates} currentVote={state.currentVote} dispatch={dispatch}
-              data={data} memberLookup={memberLookup} />
+              data={data} memberLookup={memberLookup} seatNames={seatNames} />
           </div>
 
           {/* Sidebar: on mobile this comes between circle and cards */}
