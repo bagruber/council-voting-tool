@@ -17,15 +17,15 @@
         extend: {
           colors: {
             primary:  { dark: '#5A070A', DEFAULT: '#9B0000', bright: '#E6001E' },
-            accent:   { DEFAULT: '#B39F7A', light: '#E8DFCF' },
-            bg:       '#FAF8F5',
+            accent:   { DEFAULT: '#B39F7A', light: '#EAE6DD' },
+            bg:       '#F7F7F5',
             surface:  '#FFFFFF',
-            brd:      '#E8E2D8',
+            brd:      '#E2E1DD',
             'tx':     '#2D2D2D',
-            'tx-m':   '#777777',
-            vote:     { yes: '#78BE1E', no: '#9B0000' },
-            absent:   '#B0B0B0',
-            info:     '#5B9BD5',
+            'tx-m':   '#6B6B68',
+            vote:     { yes: '#5E9E14', no: '#9B0000' },
+            absent:   '#9C9C99',
+            info:     '#4A87C0',
           },
           fontFamily: {
             sans:  ['Noto Sans', 'system-ui', 'sans-serif'],
@@ -33,7 +33,7 @@
           },
           boxShadow: {
             card:   '0 1px 3px rgba(0,0,0,0.07)',
-            'card-lg': '0 4px 16px rgba(0,0,0,0.10)',
+            'card-lg': '0 8px 28px rgba(0,0,0,0.14)',
           },
         }
       }
@@ -49,57 +49,110 @@
   <script crossorigin src="https://unpkg.com/jszip@3/dist/jszip.min.js"></script>
 
   <style>
-    body { background: #FAF8F5; color: #2D2D2D; }
+    body { background: #F7F7F5; color: #2D2D2D; }
 
-    /* Responsive seat circles */
+    /* ── Type scale ──────────────────────────────────────
+       Five steps, ~1.2 ratio, 12px floor. Nothing functional
+       is allowed below 12px — the old build went to 6px. */
+    .t-meta    { font-size: 12px; line-height: 1.45; }
+    .t-body    { font-size: 14px; line-height: 1.5; }
+    .t-strong  { font-size: 15px; line-height: 1.4; font-weight: 600; }
+    .t-display { font-size: 18px; line-height: 1.3; }
+
+    /* Section headings: the documented Moosburg label style,
+       sized up from 12px so it reads as a heading, not a kicker. */
+    .panel-title {
+      font-family: 'Noto Serif', Georgia, serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #5A070A;
+    }
+
+    /* ── Seats ───────────────────────────────────────────
+       Circles carry a shadow and no border; panels carry a
+       border and no shadow. One edge treatment each. */
     .seat-circle {
-      width: clamp(32px, 5.5vw, 50px);
-      height: clamp(32px, 5.5vw, 50px);
-      font-size: clamp(10px, 1.6vw, 13px);
+      width: clamp(38px, 5.5vw, 52px);
+      height: clamp(38px, 5.5vw, 52px);
+      font-size: clamp(12px, 1.6vw, 14px);
     }
     .seat-initials { pointer-events: none; }
 
-    .seat-node { transition: all 0.2s ease; cursor: pointer; user-select: none; }
-    .seat-node:hover { filter: brightness(1.1); }
-    .seat-node.disabled { cursor: default; opacity: 0.25; pointer-events: none; }
-    .seat-node.absent-seat { opacity: 0.45; }
-    .vote-indicator { cursor: pointer; z-index: 10; transition: transform 0.1s; }
-    .vote-indicator:hover { transform: scale(1.2); }
-    .seat-vote-badge { width: 20px; height: 20px; font-size: 11px; }
-    @media (max-width: 640px) {
-      .seat-vote-badge { width: 13px; height: 13px; font-size: 8px; }
+    .seat-node {
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      cursor: pointer; user-select: none;
+      background: none; border: none; padding: 0;
     }
+    .seat-node:hover { transform: scale(1.06); }
+    .seat-node.disabled { cursor: default; opacity: 0.3; pointer-events: none; }
+    .seat-node.absent-seat { opacity: 0.45; }
+    .seat-node:focus-visible,
+    .card-btn:focus-visible,
+    .agenda-btn:focus-visible {
+      outline: 2px solid #9B0000;
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+
+    .vote-indicator { cursor: pointer; z-index: 10; transition: transform 0.1s; }
+    .vote-indicator:hover { transform: scale(1.15); }
+    .seat-vote-badge { width: 22px; height: 22px; font-size: 12px; }
+
     .vote-badge { animation: pop 0.15s ease; }
     @keyframes pop { 0% { transform: scale(0.7); } 100% { transform: scale(1); } }
-    .log-enter { animation: slideIn 0.2s ease; }
+    .log-enter { animation: slideIn 0.2s ease-out; }
     @keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 
     .council-circle-container { min-height: 300px; }
 
-    /* Outside labels */
+    /* Outside labels: plain text on a plain field, no chip,
+       no shadow. 12px floor, so they stay legible. */
     .seat-label-outside {
       position: absolute;
       white-space: nowrap;
-      font-size: clamp(8px, 1.3vw, 11px);
-      background: rgba(255,255,255,0.92);
-      border-radius: 4px;
-      padding: 1px 5px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 0 2px;
       pointer-events: none;
       line-height: 1.2;
     }
-    .seat-label-outside.lbl-above { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 3px; }
-    .seat-label-outside.lbl-left  { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 5px; text-align: right; }
-    .seat-label-outside.lbl-right { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 5px; text-align: left; }
-    .seat-label-outside.lbl-below { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; }
+    .seat-label-outside.lbl-above { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 4px; }
+    .seat-label-outside.lbl-left  { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 6px; text-align: right; }
+    .seat-label-outside.lbl-right { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 6px; text-align: left; }
+    .seat-label-outside.lbl-below { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px; }
 
-    @media (max-width: 640px) {
-      .seat-circle { width: clamp(24px, 8vw, 38px); height: clamp(24px, 8vw, 38px); font-size: clamp(9px, 2.5vw, 12px); }
-      .seat-label-outside { font-size: clamp(6px, 1.8vw, 9px); padding: 0 3px; }
+    /* Below 900px there is no room for 24 legible labels around a
+       ring. Drop them and let the named member cards below carry
+       identification, rather than shrinking type to 6px. */
+    @media (max-width: 900px) {
+      .seat-label-outside { display: none; }
+      .seat-circle { width: clamp(40px, 11vw, 56px); height: clamp(40px, 11vw, 56px); font-size: clamp(13px, 3.2vw, 16px); }
     }
 
     .tab-active { border-bottom: 2px solid #9B0000; color: #9B0000; font-weight: 600; }
-    .tab-inactive { border-bottom: 2px solid transparent; color: #777; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #6B6B68; }
+
+    /* Readable measure for the protocol prose */
+    .protocol-measure { max-width: 72ch; }
+
+    kbd {
+      font-family: 'Noto Sans', system-ui, sans-serif;
+      font-size: 11px; font-weight: 600;
+      background: #FFFFFF; border: 1px solid #C9C7C1;
+      border-bottom-width: 2px;
+      border-radius: 4px; padding: 1px 6px;
+      color: #2D2D2D; white-space: nowrap;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+      .seat-node:hover { transform: none; }
+    }
   </style>
 </head>
 <body class="min-h-screen font-sans">
