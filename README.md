@@ -32,6 +32,22 @@ Repository-Ordner.
   Abstimmungs-Dialog.
 - **Export** — JSON (maschinenlesbar), Markdown (für Mail) und ZIP-Bundle.
   Auto-Backup im LocalStorage gegen versehentliches Schließen.
+- **Tastatursteuerung** — <kbd>A</kbd> neue Abstimmung, <kbd>J</kbd> alle Ja,
+  <kbd>N</kbd> alle Nein, <kbd>Enter</kbd> speichern, <kbd>Esc</kbd> abbrechen,
+  <kbd>?</kbd> Übersicht. Buchstabenkürzel pausieren, solange ein Textfeld
+  aktiv ist. Sitze und Mitgliederkarten sind per Tab erreichbar.
+
+## Demo
+
+`index.html?demo` öffnet eine vollständig bedienbare Sitzung, vorbelegt mit
+dem Bauausschuss vom 13.07.2026 samt echter Tagesordnung aus
+`tagesordnung/`. Ein Banner führt in sieben Schritten durch alle Funktionen —
+eröffnen, Stellvertretung einrücken lassen, abstimmen, nichtöffentlicher
+Teil, beenden, exportieren. Die Schritte haken sich anhand des tatsächlichen
+Sitzungszustands ab, auch wenn man sie in anderer Reihenfolge durchläuft.
+
+Der Demo-Modus schreibt nicht ins LocalStorage-Backup und liest es auch
+nicht — eine laufende echte Sitzung kann er also nicht überschreiben.
 
 ## Lokal starten
 
