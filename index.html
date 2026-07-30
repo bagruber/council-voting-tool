@@ -80,6 +80,13 @@
     }
     .seat-initials { pointer-events: none; }
 
+    /* Absolutely positioned, so easing left/top reflows nothing else. */
+    .seat-slot {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      transition: left 0.2s ease-out, top 0.2s ease-out;
+    }
+
     .seat-node {
       transition: transform 0.15s ease, opacity 0.15s ease;
       cursor: pointer; user-select: none;
@@ -105,7 +112,19 @@
     .log-enter { animation: slideIn 0.2s ease-out; }
     @keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 
-    .council-circle-container { min-height: 300px; }
+    /* The ring's arc per seat scales with its absolute radius, not with the
+       box, so more legible labels need real width. The box grows only where
+       the page container has room for the labels that hang outside it. */
+    .council-circle-container {
+      min-height: 300px;
+      width: 100%;
+      max-width: 640px;
+      aspect-ratio: 1;
+      margin-inline: auto;
+    }
+    @media (min-width: 1536px) {
+      .council-circle-container { max-width: 860px; }
+    }
 
     /* Outside labels: plain text on a plain field, no chip,
        no shadow. 12px floor, so they stay legible. */
@@ -117,6 +136,9 @@
       padding: 0 2px;
       pointer-events: none;
       line-height: 1.2;
+    }
+    @media (min-width: 1536px) {
+      .seat-label-outside { font-size: 13px; }
     }
     .seat-label-outside.lbl-above { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 4px; }
     .seat-label-outside.lbl-left  { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 6px; text-align: right; }

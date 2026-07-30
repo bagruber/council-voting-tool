@@ -25,9 +25,12 @@ Repository-Ordner.
   Teil, Beenden. Alle Statuswechsel landen mit Zeitstempel im Protokoll.
 - **Anwesenheits-Tracking** — Sitzplan als Kreis, Klick togglet anwesend /
   abwesend. Bei Ausschüssen rückt automatisch die Stellvertretung ein.
-- **Abstimmungen** — Pro TOP Ja/Nein pro Sitz, „Alle Ja“/„Alle Nein“-Shortcuts,
-  Ergebnis-Summary vor dem Speichern. Stimmrecht ergibt sich aus aktueller
-  Anwesenheit.
+  Abwesende rücken sichtbar aus dem Kreis heraus und werden hohl dargestellt.
+- **Abstimmungen** — Pro TOP Ja/Nein pro Sitz, „Alle Ja“/„Alle Nein“ sowie
+  Ja/Nein pro Fraktion über die Partei-Chips, Ergebnis-Summary vor dem
+  Speichern. Stimmrecht ergibt sich aus aktueller Anwesenheit.
+  Während einer Abstimmung setzt ein Klick auf den Sitz die Stimme;
+  Anwesenheit ändert man dann über die Mitgliederkarten.
 - **Tagesordnung** — als Text einfügbar (eine Zeile = ein TOP), Autocomplete im
   Abstimmungs-Dialog.
 - **Export** — JSON (maschinenlesbar), Markdown (für Mail) und ZIP-Bundle.
