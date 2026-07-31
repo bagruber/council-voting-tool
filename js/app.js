@@ -42,6 +42,24 @@ function clearBackup() {
 }
 
 /* ── Keyboard ─────────────────────────────────────────── */
+const RESERVED_KEYS = new Set(['a', 'j', 'n']);
+
+/* Party keys are derived, never hard-coded. First letters alone do not work:
+   FW, fresh and FDP all begin with F, and A already means "Abstimmung". Each
+   party takes the first letter of its name that is still free, and the result
+   is printed on its chip rather than left to be guessed. */
+function buildPartyKeys(partyIds, parties) {
+  const taken = new Set(RESERVED_KEYS);
+  const out = {};
+  partyIds.forEach(pid => {
+    const name = (COUNCIL_DATA.getParty(parties, pid).name || pid).toLowerCase();
+    for (const ch of name) {
+      if (ch >= 'a' && ch <= 'z' && !taken.has(ch)) { out[pid] = ch; taken.add(ch); break; }
+    }
+  });
+  return out;
+}
+
 const SHORTCUTS = [
   { key: 'A', label: 'Neue Abstimmung starten' },
   { key: 'J', label: 'Alle Ja' },
@@ -79,7 +97,8 @@ function useHotkeys(handlers) {
         case 'j': if (h.onBulkYes) { e.preventDefault(); h.onBulkYes(); } break;
         case 'n': if (h.onBulkNo)  { e.preventDefault(); h.onBulkNo(); } break;
         case '?': if (h.onHelp)    { e.preventDefault(); h.onHelp(); } break;
-        default: break;
+        // Party keys are assigned at runtime, so the handler claims the key.
+        default: if (h.onPartyKey && h.onPartyKey(e.key.toLowerCase())) e.preventDefault(); break;
       }
     };
     window.addEventListener('keydown', onKey);
@@ -684,23 +703,25 @@ function SeatCircle({ member, names, partyColor, seatInfo, voting, voteValue, on
           style={style}>
           <span className="seat-initials">{names.initials}</span>
         </span>
+        {/* Inside the button, so the badge's area toggles the vote too — as a
+            sibling it swallowed clicks and did nothing. */}
+        {castsVote && (
+          <span className={'vote-badge seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded ' +
+            (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')} aria-hidden="true">
+            <span className="text-white font-bold">{voteValue === 'yes' ? '✓' : '✗'}</span>
+          </span>
+        )}
+        {isAbsentInVote && (
+          <span className="seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded bg-absent"
+            aria-hidden="true">
+            <span className="text-white font-bold">—</span>
+          </span>
+        )}
         <span className={'seat-label-outside lbl-' + (labelPlacement || 'above')}
           style={{ color: eligible ? '#2D2D2D' : '#8A8A87' }}>
           {label}
         </span>
       </button>
-      {castsVote && (
-        <span className={'vote-badge seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded ' +
-          (voteValue === 'yes' ? 'bg-vote-yes' : 'bg-vote-no')} aria-hidden="true">
-          <span className="text-white font-bold">{voteValue === 'yes' ? '✓' : '✗'}</span>
-        </span>
-      )}
-      {isAbsentInVote && (
-        <span className="seat-vote-badge absolute -bottom-1 -right-1 flex items-center justify-center rounded bg-absent"
-          title={fullName + ' – abwesend'}>
-          <span className="text-white font-bold">—</span>
-        </span>
-      )}
     </div>
   );
 }
@@ -1212,7 +1233,7 @@ function ExportPanel({ state, activeMembers, memberLookup, bodyName, onDownloade
 /* ── Party Legend ──────────────────────────────────────── */
 /* While a vote is open each party carries Ja/Nein buttons that set only the
    present members of that party — absent members are left untouched. */
-function PartyLegend({ members, data, currentVote, partyOf, dispatch }) {
+function PartyLegend({ members, data, currentVote, partyOf, partyKeys, dispatch }) {
   const groups = {};
   members.forEach(m => {
     if (!groups[m.currentParty]) groups[m.currentParty] = 0;
@@ -1241,6 +1262,7 @@ function PartyLegend({ members, data, currentVote, partyOf, dispatch }) {
             <div className="flex items-center gap-1.5 px-2 py-1 whitespace-nowrap" style={{ color: p.color }}>
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }}></span>
               {p.name} ({count})
+              {partyKeys[pid] && <kbd className="kbd-hint ml-0.5">{partyKeys[pid].toUpperCase()}</kbd>}
             </div>
             {currentVote && (
               <div className="flex border-t" style={{ borderColor: edge }}>
@@ -1349,6 +1371,14 @@ function ShortcutHelp({ onClose }) {
               </div>
             ))}
           </dl>
+          <div className="flex items-baseline gap-3 mt-2.5">
+            <dt className="w-14 flex-shrink-0"><kbd>C G F …</kbd></dt>
+            <dd className="t-body">
+              Partei-Buchstabe: schaltet die ganze Fraktion auf Ja — und auf Nein,
+              wenn sie bereits geschlossen mit Ja stimmt. Der Buchstabe steht auf
+              dem jeweiligen Partei-Chip.
+            </dd>
+          </div>
           <p className="t-meta text-tx-m mt-4">Buchstabenkürzel pausieren, solange ein Textfeld aktiv ist.</p>
         </div>
 
@@ -1457,6 +1487,14 @@ function App() {
     return m;
   }, [activeMembers]);
 
+  // Same iteration order the legend uses, so chip order and key order agree.
+  const partyKeys = useMemo(() => {
+    if (!data) return {};
+    const ids = [];
+    activeMembers.forEach(m => { if (!ids.includes(m.currentParty)) ids.push(m.currentParty); });
+    return buildPartyKeys(ids, data.parties);
+  }, [activeMembers, data]);
+
   const bodyDef = useMemo(() => data ? data.bodies.find(b => b.id === state.bodyId) : null, [data, state.bodyId]);
   const bodyConfig = useMemo(() => bodyDef ? COUNCIL_DATA.getBodyConfig(bodyDef, activeMembers) : null, [bodyDef, activeMembers]);
   const bodyName = bodyDef ? bodyDef.name : state.bodyId;
@@ -1536,6 +1574,19 @@ function App() {
     dispatch({ type: 'BULK_VOTE', value });
   };
 
+  /* A party key flips the whole Fraktion: to Ja, or to Nein when it already
+     votes Ja as a bloc. A mixed party goes to Ja — one direction had to be
+     the convention, and a vote starts with everyone on Nein. */
+  const togglePartyVote = pid => {
+    const votes = state.currentVote.votes;
+    const ids = Object.keys(votes).filter(id => partyOf[id] === pid && votes[id] !== 'absent');
+    const name = COUNCIL_DATA.getParty(data.parties, pid).name;
+    if (!ids.length) return showHint(name + ': niemand anwesend.');
+    const allYes = ids.every(id => votes[id] === 'yes');
+    dispatch({ type: 'BULK_VOTE', value: allYes ? 'no' : 'yes', memberIds: ids });
+    showHint(name + ': alle ' + ids.length + ' auf ' + (allYes ? 'Nein' : 'Ja') + '.');
+  };
+
   useHotkeys({
     onHelp: () => setShowHelp(v => !v),
     onNewVote: () => {
@@ -1545,6 +1596,14 @@ function App() {
     },
     onBulkYes: () => bulk('yes'),
     onBulkNo:  () => bulk('no'),
+    onPartyKey: key => {
+      const pid = Object.keys(partyKeys).find(id => partyKeys[id] === key);
+      if (!pid) return false;
+      if (!sessionLive) { showHint('Erst die Sitzung eröffnen.'); return true; }
+      if (!state.currentVote) { showHint('Keine Abstimmung offen — mit A starten.'); return true; }
+      togglePartyVote(pid);
+      return true;
+    },
     onSave: () => {
       if (showConfirm || !state.currentVote || !state.currentVote.title.trim()) return false;
       setShowConfirm(true);
@@ -1597,7 +1656,7 @@ function App() {
           {/* Circle */}
           <div className="lg:col-span-2 space-y-3">
             <PartyLegend members={activeMembers} data={data} currentVote={state.currentVote}
-              partyOf={partyOf} dispatch={dispatch} />
+              partyOf={partyOf} partyKeys={partyKeys} dispatch={dispatch} />
             <CouncilCircle councillors={councillors} mayor={mayor} bodyConfig={bodyConfig}
               seatStates={state.seatStates} currentVote={state.currentVote} dispatch={dispatch}
               data={data} memberLookup={memberLookup} seatNames={seatNames} />
