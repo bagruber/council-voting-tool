@@ -51,10 +51,18 @@ Repository-Ordner.
 
 `index.html?demo` öffnet eine vollständig bedienbare Sitzung, vorbelegt mit
 dem Bauausschuss vom 13.07.2026 samt echter Tagesordnung aus
-`tagesordnung/`. Ein Banner führt in sieben Schritten durch alle Funktionen —
-eröffnen, Stellvertretung einrücken lassen, abstimmen, nichtöffentlicher
-Teil, beenden, exportieren. Die Schritte haken sich anhand des tatsächlichen
-Sitzungszustands ab, auch wenn man sie in anderer Reihenfolge durchläuft.
+`tagesordnung/`. Eine Leiste über dem Header führt in zehn Schritten durch
+alle Funktionen — eröffnen, Stellvertretung einrücken lassen, TOP wählen,
+einzeln abstimmen, Fraktionen schalten, benennen, speichern,
+nichtöffentlicher Teil, beenden, exportieren. Die Schritte haken sich anhand
+des tatsächlichen Sitzungszustands ab, auch wenn man sie in anderer
+Reihenfolge durchläuft.
+
+Das jeweils gefragte Element wird hervorgehoben: Jeder Schritt trägt eine
+`id`, die Oberfläche markiert die passenden Elemente mit
+`data-demo="<id>"`, und die Leiste blendet für den offenen Schritt genau
+eine CSS-Regel ein. Ein neuer Schritt braucht also nur ein Attribut im JSX —
+ein Test prüft, dass zu jeder Schritt-`id` auch ein Ziel existiert.
 
 Der Demo-Modus schreibt nicht ins LocalStorage-Backup und liest es auch
 nicht — eine laufende echte Sitzung kann er also nicht überschreiben.

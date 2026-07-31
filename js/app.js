@@ -132,28 +132,41 @@ const DEMO_SESSION = {
 };
 
 /* Each step completes when the reducer state says it happened, so the tour
-   follows whatever the user actually does — including out of order. */
+   follows whatever the user actually does — including out of order. `id`
+   doubles as the highlight target: elements carrying data-demo="<id>" get
+   outlined while that step is open. */
 const DEMO_STEPS = [
-  { title: 'Sitzung eröffnen',
-    hint: 'Oben rechts. Die Anwesenheit zu Beginn wird dabei namentlich protokolliert.',
+  { id: 'open', title: 'Sitzung eröffnen',
+    hint: 'Die Anwesenheit zu Beginn wird dabei namentlich protokolliert.',
     done: s => s.session.status !== 'idle' },
-  { title: 'Stellvertretung einrücken lassen',
+  { id: 'presence', title: 'Stellvertretung einrücken lassen',
     hint: 'Einen Sitz anklicken: 1× Stellvertretung übernimmt, 2× Sitz bleibt leer, 3× zurück zum ordentlichen Mitglied. Nie sind beide gleichzeitig stimmberechtigt.',
     done: s => Object.values(s.seatStates).some(v => v !== 'regular' && v !== 'present') },
-  { title: 'Abstimmung starten',
-    hint: 'Auf einen TOP in der Tagesordnung klicken — der Punkt wird übernommen. Oder Taste +.',
+  { id: 'agenda', title: 'Abstimmung zu einem TOP starten',
+    hint: 'Auf einen Tagesordnungspunkt klicken — er wird in die Abstimmung übernommen. Oder Taste +.',
     done: s => !!s.currentVote || s.votes.length > 0 },
-  { title: 'Stimmen erfassen und speichern',
-    hint: 'Klick auf einen Sitz setzt dessen Stimme. J = alle Ja, N = alle Nein, der Anfangsbuchstabe einer Fraktion schaltet diese geschlossen um. Dann Titel eintragen und speichern.',
+  { id: 'cast', title: 'Einzelne Stimmen setzen',
+    hint: 'Ein Klick auf den Sitz schaltet dessen Stimme zwischen Ja und Nein.',
+    done: s => s.votes.length > 0 ||
+      (!!s.currentVote && Object.values(s.currentVote.votes).some(v => v === 'yes')) },
+  { id: 'bulk', title: 'Ganze Fraktionen schalten',
+    hint: 'Ja/Nein am Partei-Chip setzt die ganze Fraktion. Auf der Tastatur: Anfangsbuchstabe der Fraktion, J alle Ja, N alle Nein.',
+    done: s => s.votes.length > 0 ||
+      (!!s.currentVote && new Set(Object.values(s.currentVote.votes)).size === 1) },
+  { id: 'title', title: 'Abstimmung benennen',
+    hint: 'Ohne Titel lässt sich nicht speichern — er trägt später das Protokoll.',
+    done: s => s.votes.length > 0 || (!!s.currentVote && !!s.currentVote.title.trim()) },
+  { id: 'save', title: 'Ergebnis speichern',
+    hint: 'Die Zusammenfassung zeigt das Ergebnis vor dem Bestätigen.',
     done: s => s.votes.length > 0 },
-  { title: 'In den nichtöffentlichen Teil wechseln',
-    hint: 'Der Button „Öffentlich“ schaltet um. Abstimmungen ab hier landen im getrennten Export.',
+  { id: 'nonpublic', title: 'In den nichtöffentlichen Teil wechseln',
+    hint: 'Abstimmungen ab hier landen im getrennten Export.',
     done: s => s.log.some(e => e.type === 'session_nonpublic') },
-  { title: 'Sitzung beenden',
-    hint: '„Beenden“ schließt die Sitzung ab und gibt den Export frei.',
+  { id: 'end', title: 'Sitzung beenden',
+    hint: 'Das schließt die Sitzung ab und gibt den Export frei.',
     done: s => s.session.status === 'ended' },
-  { title: 'Protokoll exportieren',
-    hint: 'ZIP enthält Protokolltext plus öffentliche und nichtöffentliche Abstimmungen getrennt.',
+  { id: 'export', title: 'Protokoll exportieren',
+    hint: 'Das ZIP enthält den Protokolltext plus öffentliche und nichtöffentliche Abstimmungen getrennt.',
     done: () => false },
 ];
 
@@ -631,23 +644,27 @@ function SessionControls({ session, dispatch, bodyConfig, memberLookup }) {
     <div className="flex flex-wrap items-center gap-2">
       {status === 'idle' && (
         <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-white text-primary-dark hover:bg-accent-light transition-colors shadow"
+          data-demo="open"
           onClick={() => dispatch({ type: 'START_SESSION', bodyConfig, memberLookup })}>Sitzung eröffnen</button>
       )}
       {status === 'active' && <>
         <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-yellow-300 text-yellow-900 hover:bg-yellow-200 shadow"
           onClick={() => dispatch({ type: 'PAUSE_SESSION' })}>Unterbrechen</button>
         <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-white text-vote-no hover:bg-red-50 shadow border border-red-200"
+          data-demo="end"
           onClick={() => dispatch({ type: 'END_SESSION' })}>Beenden</button>
       </>}
       {status === 'paused' && <>
         <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-white text-primary-dark hover:bg-accent-light shadow"
           onClick={() => dispatch({ type: 'RESUME_SESSION' })}>Fortsetzen</button>
         <button className="px-4 py-2 rounded-lg font-semibold text-sm bg-white text-vote-no hover:bg-red-50 shadow border border-red-200"
+          data-demo="end"
           onClick={() => dispatch({ type: 'END_SESSION' })}>Beenden</button>
       </>}
       {(status === 'active' || status === 'paused') && (
         <button className={'px-4 py-2 rounded-lg font-semibold text-sm shadow ' +
           (mode === 'public' ? 'bg-white/80 text-tx' : 'bg-gray-700 text-white')}
+          data-demo="nonpublic"
           onClick={() => dispatch({ type: 'SET_MODE', mode: mode === 'public' ? 'nonpublic' : 'public' })}>
           {mode === 'public' ? 'Öffentlich' : 'Nichtöffentlich'}
         </button>
@@ -774,8 +791,10 @@ function CouncilCircle({ councillors, mayor, bodyConfig, seatStates, currentVote
 
   const voting = !!currentVote;
 
+  // Sizing lives in CSS — an inline max-width would outrank the media query
+  // that widens the ring on large screens.
   return (
-    <div className="relative mx-auto council-circle-container" style={{ width: '100%', maxWidth: 640, aspectRatio: '1' }}>
+    <div className="relative council-circle-container" data-demo="presence cast">
       {ordered.map((m, i) => {
         const info = getSeatInfo(m.id, bodyConfig, seatStates);
         const away = info.eligible && !info.active;
@@ -952,7 +971,7 @@ function VotePanel({ currentVote, session, dispatch, agenda, startVote, cmdKeys,
   return (
     <div className="bg-surface rounded-lg border border-brd p-4 space-y-3">
       <h3 className="panel-title">Abstimmung</h3>
-      <input type="text" placeholder="Titel der Abstimmung *" value={currentVote.title}
+      <input type="text" placeholder="Titel der Abstimmung *" value={currentVote.title} data-demo="title"
         onChange={e => dispatch({ type: 'UPDATE_VOTE', fields: { title: e.target.value } })}
         className="w-full border border-brd rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none" />
       <input type="text" placeholder="Tagesordnungspunkt" value={currentVote.agendaItem} list="agenda-list"
@@ -983,7 +1002,7 @@ function VotePanel({ currentVote, session, dispatch, agenda, startVote, cmdKeys,
         <button className="flex-1 py-2 bg-gray-200 text-tx rounded-lg font-semibold text-sm hover:bg-gray-300"
           onClick={() => dispatch({ type: 'CANCEL_VOTE' })}>Abbrechen</button>
         <button className="flex-1 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark disabled:opacity-40"
-          disabled={!currentVote.title.trim()} onClick={onRequestConfirm}>Speichern</button>
+          disabled={!currentVote.title.trim()} onClick={onRequestConfirm} data-demo="save">Speichern</button>
       </div>
       {showConfirm && (
         <VoteConfirmModal vote={currentVote} yes={yes} no={no} absent={absent} voting={voting}
@@ -1030,7 +1049,7 @@ function AgendaPanel({ agenda, dispatch, startVote, canStartVote, votedItems }) 
     setVal('');
   };
   return (
-    <div className="bg-surface rounded-lg border border-brd p-4">
+    <div className="bg-surface rounded-lg border border-brd p-4" data-demo="agenda">
       <h3 className="panel-title mb-2">Tagesordnung</h3>
       <div className="flex gap-2 mb-1">
         <textarea value={val} placeholder="Neuer TOP… (Enter = hinzufügen, Shift+Enter = neue Zeile)" rows={1}
@@ -1230,7 +1249,7 @@ function ExportPanel({ state, activeMembers, memberLookup, bodyName, onDownloade
   };
 
   return (
-    <div className="bg-surface rounded-lg border border-brd p-4">
+    <div className="bg-surface rounded-lg border border-brd p-4" data-demo="export">
       <h3 className="panel-title mb-2">Export</h3>
       <div className="space-y-2">
         <button className="w-full py-2.5 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-colors"
@@ -1260,7 +1279,7 @@ function PartyLegend({ members, data, currentVote, partyOf, dispatch }) {
     : [];
 
   return (
-    <div className="flex flex-wrap gap-2 justify-center">
+    <div className="flex flex-wrap gap-2 justify-center" data-demo="bulk">
       {Object.entries(groups).map(([pid, count]) => {
         const p = COUNCIL_DATA.getParty(data.parties, pid);
         const ids = votersOf(pid);
@@ -1424,36 +1443,47 @@ function ShortcutHelp({ onClose, keymap, data }) {
 function DemoBanner({ state }) {
   const stepIndex = DEMO_STEPS.findIndex(s => !s.done(state));
   const current = stepIndex === -1 ? null : DEMO_STEPS[stepIndex];
+  const done = DEMO_STEPS.filter(s => s.done(state)).length;
 
   return (
-    <div className="bg-accent-light border-b border-brd">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-start gap-x-6 gap-y-3">
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="panel-title">Demo</span>
-          <div className="flex gap-1" aria-hidden="true">
-            {DEMO_STEPS.map((s, i) => (
-              <span key={i} className={'block w-4 h-1.5 rounded-full ' +
-                (s.done(state) ? 'bg-primary' : i === stepIndex ? 'bg-primary/40' : 'bg-black/10')} />
-            ))}
-          </div>
-        </div>
-        <div className="flex-1 min-w-[15rem]">
+    <div className="sticky top-0 z-30 bg-tx text-white shadow-card-lg">
+      {/* One rule, for the open step only: everything carrying this step's
+          id in data-demo gets outlined. */}
+      {current && <style dangerouslySetInnerHTML={{ __html:
+        '[data-demo~="' + current.id + '"]{outline:3px solid #E6001E;outline-offset:4px;border-radius:10px;}'
+      }} />}
+
+      <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex-1 min-w-[16rem]">
           {current ? (
             <>
-              <p className="t-strong">Schritt {stepIndex + 1} von {DEMO_STEPS.length}: {current.title}</p>
-              <p className="t-meta text-tx-m protocol-measure">{current.hint}</p>
+              <p className="flex items-baseline gap-2 flex-wrap">
+                <span className="t-meta font-semibold uppercase tracking-wider text-accent">
+                  Demo · Schritt {stepIndex + 1}/{DEMO_STEPS.length}
+                </span>
+                <span className="font-serif font-bold t-display">{current.title}</span>
+              </p>
+              <p className="t-body text-white/75 protocol-measure mt-0.5">{current.hint}</p>
             </>
           ) : (
             <>
-              <p className="t-strong">Alle Schritte durchlaufen.</p>
-              <p className="t-meta text-tx-m">Protokoll und Export unten enthalten den kompletten Sitzungsverlauf.</p>
+              <p className="font-serif font-bold t-display">Alle {DEMO_STEPS.length} Schritte durchlaufen.</p>
+              <p className="t-body text-white/75 mt-0.5">Protokoll und Export unten enthalten den kompletten Sitzungsverlauf.</p>
             </>
           )}
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <button className="px-3 py-1.5 rounded-lg t-meta font-semibold bg-surface border border-brd hover:bg-white"
+
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex gap-1" role="img"
+            aria-label={done + ' von ' + DEMO_STEPS.length + ' Schritten erledigt'}>
+            {DEMO_STEPS.map((s, i) => (
+              <span key={s.id} className={'block w-4 h-1.5 rounded-full ' +
+                (s.done(state) ? 'bg-accent' : i === stepIndex ? 'bg-white' : 'bg-white/25')} />
+            ))}
+          </div>
+          <button className="px-3 py-1.5 rounded-lg t-meta font-semibold border border-white/35 hover:bg-white/15"
             onClick={() => location.reload()}>Neu starten</button>
-          <a className="px-3 py-1.5 rounded-lg t-meta font-semibold bg-surface border border-brd hover:bg-white"
+          <a className="px-3 py-1.5 rounded-lg t-meta font-semibold border border-white/35 hover:bg-white/15"
             href="index.html">Demo verlassen</a>
         </div>
       </div>
@@ -1670,10 +1700,11 @@ function App() {
           role="status">{hint}</div>
       )}
 
+      {DEMO_MODE && <DemoBanner state={state} />}
+
       <SessionHeader session={state.session} bodyId={state.bodyId} bodies={data.bodies}
         dispatch={dispatch} bodyConfig={bodyConfig} memberLookup={memberLookup}
         onShowHelp={() => setShowHelp(true)} />
-      {DEMO_MODE && <DemoBanner state={state} />}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Mobile: stacks in DOM order. Desktop: grid with sidebar spanning rows */}
