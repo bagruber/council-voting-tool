@@ -1,16 +1,16 @@
 {
   "parties": [
-    { "id": "csu",    "name": "CSU",          "color": "#0a0a0a", "accent": "#0080c8" },
-    { "id": "gruene", "name": "Grüne",        "color": "#64A12D", "accent": "#8FC63E" },
-    { "id": "fw",     "name": "Freie Wähler", "color": "#F58220", "accent": "#F9A825" },
-    { "id": "spd",    "name": "SPD",          "color": "#E31E2D", "accent": "#FF5733" },
-    { "id": "fresh",  "name": "fresh",        "color": "#36C9C5", "accent": "#5DDBD8" },
-    { "id": "afd",    "name": "AfD",          "color": "#009DE0", "accent": "#33B5E5" },
-    { "id": "fdp",    "name": "FDP",          "color": "#FFED00", "accent": "#FFF176" },
-    { "id": "oedp",   "name": "ÖDP",         "color": "#F07D00", "accent": "#F9A825" },
-    { "id": "linke",  "name": "Linke",        "color": "#BE3075", "accent": "#D81B60" },
-    { "id": "umb",    "name": "UMB",          "color": "#4A7FB5", "accent": "#6BA3D6" },
-    { "id": "parteilos", "name": "parteilos",  "color": "#999999", "accent": "#bbbbbb" }
+    { "id": "csu", "key": "c",    "name": "CSU",          "color": "#0a0a0a", "accent": "#0080c8" },
+    { "id": "gruene", "key": "g", "name": "Grüne",        "color": "#64A12D", "accent": "#8FC63E" },
+    { "id": "fw", "key": "w",     "name": "Freie Wähler", "color": "#F58220", "accent": "#F9A825" },
+    { "id": "spd", "key": "s",    "name": "SPD",          "color": "#E31E2D", "accent": "#FF5733" },
+    { "id": "fresh", "key": "f",  "name": "fresh",        "color": "#36C9C5", "accent": "#5DDBD8" },
+    { "id": "afd", "key": "a",    "name": "AfD",          "color": "#009DE0", "accent": "#33B5E5" },
+    { "id": "fdp", "key": "d",    "name": "FDP",          "color": "#FFED00", "accent": "#FFF176" },
+    { "id": "oedp", "key": "o",   "name": "ÖDP",         "color": "#F07D00", "accent": "#F9A825" },
+    { "id": "linke", "key": "l",  "name": "Linke",        "color": "#BE3075", "accent": "#D81B60" },
+    { "id": "umb", "key": "u",    "name": "UMB",          "color": "#4A7FB5", "accent": "#6BA3D6" },
+    { "id": "parteilos", "key": "p", "name": "parteilos",  "color": "#999999", "accent": "#bbbbbb" }
   ],
   "seatOrder": ["gruene", "fw", "fresh", "linke", "spd", "afd", "csu", "oedp", "fdp"],
 

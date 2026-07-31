@@ -35,15 +35,17 @@ Repository-Ordner.
   Abstimmungs-Dialog.
 - **Export** — JSON (maschinenlesbar), Markdown (für Mail) und ZIP-Bundle.
   Auto-Backup im LocalStorage gegen versehentliches Schließen.
-- **Tastatursteuerung** — <kbd>A</kbd> neue Abstimmung, <kbd>J</kbd> alle Ja,
-  <kbd>N</kbd> alle Nein, <kbd>Enter</kbd> speichern, <kbd>Esc</kbd> abbrechen,
-  <kbd>?</kbd> Übersicht. Dazu ein Buchstabe pro Fraktion, der die ganze
-  Fraktion auf Ja schaltet — und auf Nein, wenn sie bereits geschlossen mit Ja
-  stimmt. Die Buchstaben werden zur Laufzeit vergeben (erster freier Buchstabe
-  des Parteinamens, <kbd>A</kbd>/<kbd>J</kbd>/<kbd>N</kbd> bleiben reserviert)
-  und stehen auf dem jeweiligen Partei-Chip — im aktuellen Stadtrat also
-  C, G, F, S, R, D, L. Buchstabenkürzel pausieren, solange ein Textfeld aktiv
-  ist. Sitze und Mitgliederkarten sind per Tab erreichbar.
+- **Tastatursteuerung** — Die Fraktionen haben Vorrang auf den Buchstaben:
+  <kbd>C</kbd> CSU, <kbd>G</kbd> Grüne, <kbd>W</kbd> Freie Wähler,
+  <kbd>S</kbd> SPD, <kbd>F</kbd> fresh, <kbd>A</kbd> AfD, <kbd>L</kbd> Linke.
+  Der Buchstabe schaltet die ganze Fraktion auf Ja — und auf Nein, wenn sie
+  bereits geschlossen mit Ja stimmt. Weil es jeweils der Anfangsbuchstabe des
+  Namens ist, braucht es dafür keinen Hinweis in der Oberfläche.
+  Die Befehle nehmen, was übrig bleibt: <kbd>+</kbd> neue Abstimmung,
+  <kbd>J</kbd> alle Ja, <kbd>N</kbd> alle Nein, <kbd>Enter</kbd> speichern,
+  <kbd>Esc</kbd> abbrechen, <kbd>?</kbd> Übersicht. Buchstabenkürzel pausieren,
+  solange ein Textfeld aktiv ist. Sitze und Mitgliederkarten sind per Tab
+  erreichbar.
 
 ## Demo
 
@@ -93,7 +95,10 @@ Drei Stellen reichen für die meisten Fälle:
 Die zentrale Konfigurationsdatei. Sie enthält:
 
 - **`parties`** — Liste mit `id`, `name`, `color`, `accent` (Hex). Bestimmt
-  Sitzfarbe und Akzent.
+  Sitzfarbe und Akzent. Optional `key`: der Buchstabe, mit dem sich die
+  Fraktion geschlossen umschalten lässt. Fraktionen haben Vorrang vor den
+  Befehlskürzeln — fehlt `key`, wird der erste freie Anfangsbuchstabe des
+  Namens vergeben.
 - **`seatOrder`** — Reihenfolge der Parteien beim Layout des Sitzkreises
   (links nach rechts, politisches Spektrum).
 - **`councilOrder`** — *optional*: explizite Reihenfolge einzelner Mitglieder

@@ -42,32 +42,53 @@ function clearBackup() {
 }
 
 /* ── Keyboard ─────────────────────────────────────────── */
-const RESERVED_KEYS = new Set(['a', 'j', 'n']);
 
-/* Party keys are derived, never hard-coded. First letters alone do not work:
-   FW, fresh and FDP all begin with F, and A already means "Abstimmung". Each
-   party takes the first letter of its name that is still free, and the result
-   is printed on its chip rather than left to be guessed. */
-function buildPartyKeys(partyIds, parties) {
-  const taken = new Set(RESERVED_KEYS);
-  const out = {};
+/* Parties own the letter namespace. Each declares its key in members.json —
+   the natural first letter of its name (fresh F, Freie Wähler W) — so the
+   shortcut needs no on-screen hint. Commands take what is left afterwards,
+   which is why "neue Abstimmung" sits on "+": it is outside the letters, so
+   no party can ever claim it, however this app is adapted. */
+function buildKeymap(partyIds, parties) {
+  const taken = new Set();
+  const partyKeys = {};
+
   partyIds.forEach(pid => {
-    const name = (COUNCIL_DATA.getParty(parties, pid).name || pid).toLowerCase();
-    for (const ch of name) {
-      if (ch >= 'a' && ch <= 'z' && !taken.has(ch)) { out[pid] = ch; taken.add(ch); break; }
+    const party = COUNCIL_DATA.getParty(parties, pid);
+    const declared = (party.key || '').toLowerCase();
+    if (declared && !taken.has(declared)) { partyKeys[pid] = declared; taken.add(declared); return; }
+    // Fallback for parties with no declared key: word initials, then any letter.
+    const name = (party.name || pid).toLowerCase();
+    const candidates = name.split(/\s+/).map(w => w.charAt(0)).concat([...name]);
+    for (const ch of candidates) {
+      if (ch >= 'a' && ch <= 'z' && !taken.has(ch)) { partyKeys[pid] = ch; taken.add(ch); break; }
     }
   });
-  return out;
+
+  const pick = prefs => {
+    for (const k of prefs) if (!taken.has(k)) { taken.add(k); return k; }
+    return null;
+  };
+  return {
+    parties: partyKeys,
+    commands: {
+      newVote: pick(['+']),
+      bulkYes: pick(['j', 'y']),
+      bulkNo:  pick(['n', 'x']),
+      help:    pick(['?']),
+    },
+  };
 }
 
-const SHORTCUTS = [
-  { key: 'A', label: 'Neue Abstimmung starten' },
-  { key: 'J', label: 'Alle Ja' },
-  { key: 'N', label: 'Alle Nein' },
-  { key: '↵', label: 'Abstimmung speichern' },
-  { key: 'Esc', label: 'Dialog schließen / Abstimmung abbrechen' },
-  { key: '?', label: 'Diese Übersicht' },
-];
+function commandShortcuts(cmd) {
+  return [
+    { key: cmd.newVote, label: 'Neue Abstimmung starten' },
+    { key: cmd.bulkYes ? cmd.bulkYes.toUpperCase() : null, label: 'Alle Ja' },
+    { key: cmd.bulkNo ? cmd.bulkNo.toUpperCase() : null, label: 'Alle Nein' },
+    { key: '↵', label: 'Abstimmung speichern' },
+    { key: 'Esc', label: 'Dialog schließen / Abstimmung abbrechen' },
+    { key: cmd.help, label: 'Diese Übersicht' },
+  ].filter(s => s.key);
+}
 
 /* Handlers are read through a ref so the listener binds once and still
    sees fresh state. Letter keys stay inert while a field has focus;
@@ -92,14 +113,8 @@ function useHotkeys(handlers) {
       }
       if (typing) return;
 
-      switch (e.key.toLowerCase()) {
-        case 'a': if (h.onNewVote) { e.preventDefault(); h.onNewVote(); } break;
-        case 'j': if (h.onBulkYes) { e.preventDefault(); h.onBulkYes(); } break;
-        case 'n': if (h.onBulkNo)  { e.preventDefault(); h.onBulkNo(); } break;
-        case '?': if (h.onHelp)    { e.preventDefault(); h.onHelp(); } break;
-        // Party keys are assigned at runtime, so the handler claims the key.
-        default: if (h.onPartyKey && h.onPartyKey(e.key.toLowerCase())) e.preventDefault(); break;
-      }
+      // Every binding is assigned at runtime, so the handler claims the key.
+      if (e.key.length === 1 && h.onKey && h.onKey(e.key.toLowerCase())) e.preventDefault();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -915,7 +930,7 @@ function MemberCards({ allMembers, bodyConfig, seatStates, currentVote, dispatch
 
 /* ── Vote Panel ───────────────────────────────────────── */
 
-function VotePanel({ currentVote, session, dispatch, agenda, startVote, showConfirm, onRequestConfirm, onCancelConfirm }) {
+function VotePanel({ currentVote, session, dispatch, agenda, startVote, cmdKeys, showConfirm, onRequestConfirm, onCancelConfirm }) {
   if (session.status !== 'active' && session.status !== 'paused') return null;
 
   if (!currentVote) {
@@ -923,7 +938,7 @@ function VotePanel({ currentVote, session, dispatch, agenda, startVote, showConf
       <div className="bg-surface rounded-lg border border-brd p-4">
         <button className="w-full py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-colors"
           onClick={() => startVote()}>
-          Neue Abstimmung <kbd className="kbd-hint ml-1 align-middle">A</kbd>
+          Neue Abstimmung{cmdKeys.newVote && <kbd className="kbd-hint ml-1 align-middle">{cmdKeys.newVote}</kbd>}
         </button>
       </div>
     );
@@ -949,9 +964,9 @@ function VotePanel({ currentVote, session, dispatch, agenda, startVote, showConf
         className="w-full border border-brd rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-primary focus:outline-none" />
       <div className="flex gap-2">
         <button className="flex-1 py-2 bg-vote-yes text-white rounded-lg font-bold text-sm hover:opacity-90"
-          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'yes' })}>Alle Ja <kbd className="kbd-hint ml-1 align-middle">J</kbd></button>
+          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'yes' })}>Alle Ja{cmdKeys.bulkYes && <kbd className="kbd-hint ml-1 align-middle">{cmdKeys.bulkYes.toUpperCase()}</kbd>}</button>
         <button className="flex-1 py-2 bg-vote-no text-white rounded-lg font-bold text-sm hover:opacity-90"
-          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no' })}>Alle Nein <kbd className="kbd-hint ml-1 align-middle">N</kbd></button>
+          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no' })}>Alle Nein{cmdKeys.bulkNo && <kbd className="kbd-hint ml-1 align-middle">{cmdKeys.bulkNo.toUpperCase()}</kbd>}</button>
       </div>
       <div className="text-center text-sm space-x-2">
         <span className="text-vote-yes font-bold">{yes} Ja</span>
@@ -1233,7 +1248,7 @@ function ExportPanel({ state, activeMembers, memberLookup, bodyName, onDownloade
 /* ── Party Legend ──────────────────────────────────────── */
 /* While a vote is open each party carries Ja/Nein buttons that set only the
    present members of that party — absent members are left untouched. */
-function PartyLegend({ members, data, currentVote, partyOf, partyKeys, dispatch }) {
+function PartyLegend({ members, data, currentVote, partyOf, dispatch }) {
   const groups = {};
   members.forEach(m => {
     if (!groups[m.currentParty]) groups[m.currentParty] = 0;
@@ -1262,7 +1277,6 @@ function PartyLegend({ members, data, currentVote, partyOf, partyKeys, dispatch 
             <div className="flex items-center gap-1.5 px-2 py-1 whitespace-nowrap" style={{ color: p.color }}>
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }}></span>
               {p.name} ({count})
-              {partyKeys[pid] && <kbd className="kbd-hint ml-0.5">{partyKeys[pid].toUpperCase()}</kbd>}
             </div>
             {currentVote && (
               <div className="flex border-t" style={{ borderColor: edge }}>
@@ -1355,30 +1369,36 @@ function RecoveryModal({ recoveryData, onDismiss }) {
 }
 
 /* ── Keyboard help ────────────────────────────────────── */
-function ShortcutHelp({ onClose }) {
+function ShortcutHelp({ onClose, keymap, data }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="bg-surface rounded-xl shadow-card-lg p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
         <h3 className="font-serif font-bold t-display text-primary-dark mb-4">Bedienung</h3>
 
         <div className="kbd-section">
-          <h4 className="panel-title mb-2">Tastatur</h4>
-          <dl className="space-y-2.5">
-            {SHORTCUTS.map(s => (
-              <div key={s.key} className="flex items-baseline gap-3">
+          <h4 className="panel-title mb-2">Fraktionen</h4>
+          <p className="t-meta text-tx-m mb-2">
+            Der Anfangsbuchstabe schaltet die ganze Fraktion auf Ja — und auf Nein,
+            wenn sie bereits geschlossen mit Ja stimmt.
+          </p>
+          <dl className="space-y-2">
+            {Object.entries(keymap.parties).map(([pid, key]) => (
+              <div key={pid} className="flex items-baseline gap-3">
+                <dt className="w-14 flex-shrink-0"><kbd>{key.toUpperCase()}</kbd></dt>
+                <dd className="t-body">{COUNCIL_DATA.getParty(data.parties, pid).name}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <h4 className="panel-title mt-5 mb-2">Befehle</h4>
+          <dl className="space-y-2">
+            {commandShortcuts(keymap.commands).map(s => (
+              <div key={s.label} className="flex items-baseline gap-3">
                 <dt className="w-14 flex-shrink-0"><kbd>{s.key}</kbd></dt>
                 <dd className="t-body">{s.label}</dd>
               </div>
             ))}
           </dl>
-          <div className="flex items-baseline gap-3 mt-2.5">
-            <dt className="w-14 flex-shrink-0"><kbd>C G F …</kbd></dt>
-            <dd className="t-body">
-              Partei-Buchstabe: schaltet die ganze Fraktion auf Ja — und auf Nein,
-              wenn sie bereits geschlossen mit Ja stimmt. Der Buchstabe steht auf
-              dem jeweiligen Partei-Chip.
-            </dd>
-          </div>
           <p className="t-meta text-tx-m mt-4">Buchstabenkürzel pausieren, solange ein Textfeld aktiv ist.</p>
         </div>
 
@@ -1488,11 +1508,11 @@ function App() {
   }, [activeMembers]);
 
   // Same iteration order the legend uses, so chip order and key order agree.
-  const partyKeys = useMemo(() => {
-    if (!data) return {};
+  const keymap = useMemo(() => {
+    if (!data) return { parties: {}, commands: {} };
     const ids = [];
     activeMembers.forEach(m => { if (!ids.includes(m.currentParty)) ids.push(m.currentParty); });
-    return buildPartyKeys(ids, data.parties);
+    return buildKeymap(ids, data.parties);
   }, [activeMembers, data]);
 
   const bodyDef = useMemo(() => data ? data.bodies.find(b => b.id === state.bodyId) : null, [data, state.bodyId]);
@@ -1568,9 +1588,12 @@ function App() {
   }, []);
   useEffect(() => () => clearTimeout(hintTimer.current), []);
 
+  const cmd = keymap.commands;
+  const noVoteHint = 'Keine Abstimmung offen' + (cmd.newVote ? ' — mit ' + cmd.newVote + ' starten.' : '.');
+
   const bulk = value => {
     if (!sessionLive) return showHint('Erst die Sitzung eröffnen.');
-    if (!state.currentVote) return showHint('Keine Abstimmung offen — mit A starten.');
+    if (!state.currentVote) return showHint(noVoteHint);
     dispatch({ type: 'BULK_VOTE', value });
   };
 
@@ -1588,20 +1611,22 @@ function App() {
   };
 
   useHotkeys({
-    onHelp: () => setShowHelp(v => !v),
-    onNewVote: () => {
-      if (!sessionLive) return showHint('Erst die Sitzung eröffnen.');
-      if (state.currentVote) return showHint('Es läuft bereits eine Abstimmung.');
-      startVote();
-    },
-    onBulkYes: () => bulk('yes'),
-    onBulkNo:  () => bulk('no'),
-    onPartyKey: key => {
-      const pid = Object.keys(partyKeys).find(id => partyKeys[id] === key);
+    onKey: key => {
+      if (key === cmd.help) { setShowHelp(v => !v); return true; }
+      if (key === cmd.newVote) {
+        if (!sessionLive) showHint('Erst die Sitzung eröffnen.');
+        else if (state.currentVote) showHint('Es läuft bereits eine Abstimmung.');
+        else startVote();
+        return true;
+      }
+      if (key === cmd.bulkYes) { bulk('yes'); return true; }
+      if (key === cmd.bulkNo)  { bulk('no'); return true; }
+
+      const pid = Object.keys(keymap.parties).find(id => keymap.parties[id] === key);
       if (!pid) return false;
-      if (!sessionLive) { showHint('Erst die Sitzung eröffnen.'); return true; }
-      if (!state.currentVote) { showHint('Keine Abstimmung offen — mit A starten.'); return true; }
-      togglePartyVote(pid);
+      if (!sessionLive) showHint('Erst die Sitzung eröffnen.');
+      else if (!state.currentVote) showHint(noVoteHint);
+      else togglePartyVote(pid);
       return true;
     },
     onSave: () => {
@@ -1639,7 +1664,7 @@ function App() {
   return (
     <div className="min-h-screen">
       {recoveryData && <RecoveryModal recoveryData={recoveryData} onDismiss={() => setRecoveryData(null)} />}
-      {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
+      {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} keymap={keymap} data={data} />}
       {hint && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-tx text-white t-meta px-4 py-2 rounded-lg shadow-card-lg"
           role="status">{hint}</div>
@@ -1656,7 +1681,7 @@ function App() {
           {/* Circle */}
           <div className="lg:col-span-2 space-y-3">
             <PartyLegend members={activeMembers} data={data} currentVote={state.currentVote}
-              partyOf={partyOf} partyKeys={partyKeys} dispatch={dispatch} />
+              partyOf={partyOf} dispatch={dispatch} />
             <CouncilCircle councillors={councillors} mayor={mayor} bodyConfig={bodyConfig}
               seatStates={state.seatStates} currentVote={state.currentVote} dispatch={dispatch}
               data={data} memberLookup={memberLookup} seatNames={seatNames} />
@@ -1669,7 +1694,7 @@ function App() {
               canStartVote={sessionLive && !state.currentVote} votedItems={votedItems} />
             <VotePanel currentVote={state.currentVote} session={state.session}
               dispatch={dispatch} agenda={state.agenda} startVote={startVote}
-              showConfirm={showConfirm}
+              cmdKeys={keymap.commands} showConfirm={showConfirm}
               onRequestConfirm={() => setShowConfirm(true)}
               onCancelConfirm={() => setShowConfirm(false)} />
             {state.session.status === 'ended' && (
