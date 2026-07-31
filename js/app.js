@@ -641,7 +641,7 @@ function SessionHeader({ session, bodyId, bodies, dispatch, bodyConfig, memberLo
           <SessionControls session={session} dispatch={dispatch} bodyConfig={bodyConfig} memberLookup={memberLookup} />
           <button type="button" onClick={onShowHelp}
             className="w-9 h-9 flex-shrink-0 rounded-lg border border-white/40 font-bold hover:bg-white/15"
-            aria-label="Tastaturkürzel anzeigen" title="Tastaturkürzel (?)">?</button>
+            aria-label="Bedienung und Tastaturkürzel anzeigen" title="Bedienung (?)">?</button>
         </div>
       </div>
     </header>
@@ -902,7 +902,7 @@ function VotePanel({ currentVote, session, dispatch, agenda, startVote, showConf
       <div className="bg-surface rounded-lg border border-brd p-4">
         <button className="w-full py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-colors"
           onClick={() => startVote()}>
-          Neue Abstimmung <kbd className="ml-1 align-middle">A</kbd>
+          Neue Abstimmung <kbd className="kbd-hint ml-1 align-middle">A</kbd>
         </button>
       </div>
     );
@@ -928,9 +928,9 @@ function VotePanel({ currentVote, session, dispatch, agenda, startVote, showConf
         className="w-full border border-brd rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-primary focus:outline-none" />
       <div className="flex gap-2">
         <button className="flex-1 py-2 bg-vote-yes text-white rounded-lg font-bold text-sm hover:opacity-90"
-          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'yes' })}>Alle Ja <kbd className="ml-1 align-middle">J</kbd></button>
+          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'yes' })}>Alle Ja <kbd className="kbd-hint ml-1 align-middle">J</kbd></button>
         <button className="flex-1 py-2 bg-vote-no text-white rounded-lg font-bold text-sm hover:opacity-90"
-          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no' })}>Alle Nein <kbd className="ml-1 align-middle">N</kbd></button>
+          onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no' })}>Alle Nein <kbd className="kbd-hint ml-1 align-middle">N</kbd></button>
       </div>
       <div className="text-center text-sm space-x-2">
         <span className="text-vote-yes font-bold">{yes} Ja</span>
@@ -1228,25 +1228,35 @@ function PartyLegend({ members, data, currentVote, partyOf, dispatch }) {
       {Object.entries(groups).map(([pid, count]) => {
         const p = COUNCIL_DATA.getParty(data.parties, pid);
         const ids = votersOf(pid);
+        const edge = p.color + '44';
+        // Every party keeps the same shape during a vote — parties with nobody
+        // present here get a disabled row rather than silently losing it, so
+        // the legend never looks arbitrarily inconsistent.
+        const note = ids.length
+          ? p.name + ': alle ' + ids.length + ' Anwesenden auf '
+          : p.name + ': niemand in diesem Gremium anwesend – ';
         return (
-          <span key={pid} className="inline-flex items-center text-xs rounded-full overflow-hidden"
-            style={{ backgroundColor: p.color + '18', color: p.color, border: '1px solid ' + p.color + '44' }}>
-            <span className={'inline-flex items-center gap-1 py-0.5 pl-2 ' + (ids.length ? 'pr-1.5' : 'pr-2')}>
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }}></span>
+          <div key={pid} className="text-xs rounded-lg overflow-hidden"
+            style={{ backgroundColor: p.color + '18', border: '1px solid ' + edge }}>
+            <div className="flex items-center gap-1.5 px-2 py-1 whitespace-nowrap" style={{ color: p.color }}>
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }}></span>
               {p.name} ({count})
-            </span>
-            {ids.length > 0 && (
-              <span className="inline-flex border-l" style={{ borderColor: p.color + '44' }}>
-                <button type="button" className="px-2 py-0.5 font-semibold hover:bg-vote-yes hover:text-white"
+            </div>
+            {currentVote && (
+              <div className="flex border-t" style={{ borderColor: edge }}>
+                <button type="button" disabled={!ids.length}
+                  className="flex-1 px-3 py-1 font-semibold hover:bg-vote-yes hover:text-white disabled:opacity-35 disabled:hover:bg-transparent"
+                  style={{ color: p.color }}
                   onClick={() => dispatch({ type: 'BULK_VOTE', value: 'yes', memberIds: ids })}
-                  title={p.name + ': alle Anwesenden auf Ja (' + ids.length + ')'}>Ja</button>
-                <button type="button" className="px-2 py-0.5 font-semibold hover:bg-vote-no hover:text-white border-l"
-                  style={{ borderColor: p.color + '44' }}
+                  title={note + 'Ja'}>Ja</button>
+                <button type="button" disabled={!ids.length}
+                  className="flex-1 px-3 py-1 font-semibold border-l hover:bg-vote-no hover:text-white disabled:opacity-35 disabled:hover:bg-transparent"
+                  style={{ color: p.color, borderColor: edge }}
                   onClick={() => dispatch({ type: 'BULK_VOTE', value: 'no', memberIds: ids })}
-                  title={p.name + ': alle Anwesenden auf Nein (' + ids.length + ')'}>Nein</button>
-              </span>
+                  title={note + 'Nein'}>Nein</button>
+              </div>
             )}
-          </span>
+          </div>
         );
       })}
     </div>
@@ -1327,18 +1337,22 @@ function ShortcutHelp({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="bg-surface rounded-xl shadow-card-lg p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
-        <h3 className="font-serif font-bold t-display text-primary-dark mb-4">Tastaturkürzel</h3>
-        <dl className="space-y-2.5">
-          {SHORTCUTS.map(s => (
-            <div key={s.key} className="flex items-baseline gap-3">
-              <dt className="w-14 flex-shrink-0"><kbd>{s.key}</kbd></dt>
-              <dd className="t-body">{s.label}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="t-meta text-tx-m mt-4">Buchstabenkürzel pausieren, solange ein Textfeld aktiv ist.</p>
+        <h3 className="font-serif font-bold t-display text-primary-dark mb-4">Bedienung</h3>
 
-        <h4 className="panel-title mt-5 mb-2">Klicken</h4>
+        <div className="kbd-section">
+          <h4 className="panel-title mb-2">Tastatur</h4>
+          <dl className="space-y-2.5">
+            {SHORTCUTS.map(s => (
+              <div key={s.key} className="flex items-baseline gap-3">
+                <dt className="w-14 flex-shrink-0"><kbd>{s.key}</kbd></dt>
+                <dd className="t-body">{s.label}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="t-meta text-tx-m mt-4">Buchstabenkürzel pausieren, solange ein Textfeld aktiv ist.</p>
+        </div>
+
+        <h4 className="panel-title kbd-mt mt-5 mb-2">Tippen und Klicken</h4>
         <dl className="space-y-2 t-meta">
           <div className="flex gap-3"><dt className="w-28 flex-shrink-0 text-tx-m">Sitz</dt>
             <dd>Anwesenheit — während einer Abstimmung Ja/Nein</dd></div>
