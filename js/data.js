@@ -40,7 +40,7 @@
    */
   function processRawData(json) {
     var parties = json.parties.map(function (p) {
-      return { id: p.id, name: p.name, color: p.color };
+      return { id: p.id, name: p.name, color: p.color, key: p.key || null };
     });
 
     var members = json.members.map(function (m) {
