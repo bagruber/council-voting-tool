@@ -37,8 +37,13 @@ Repository-Ordner.
   Auto-Backup im LocalStorage gegen versehentliches Schließen.
 - **Tastatursteuerung** — <kbd>A</kbd> neue Abstimmung, <kbd>J</kbd> alle Ja,
   <kbd>N</kbd> alle Nein, <kbd>Enter</kbd> speichern, <kbd>Esc</kbd> abbrechen,
-  <kbd>?</kbd> Übersicht. Buchstabenkürzel pausieren, solange ein Textfeld
-  aktiv ist. Sitze und Mitgliederkarten sind per Tab erreichbar.
+  <kbd>?</kbd> Übersicht. Dazu ein Buchstabe pro Fraktion, der die ganze
+  Fraktion auf Ja schaltet — und auf Nein, wenn sie bereits geschlossen mit Ja
+  stimmt. Die Buchstaben werden zur Laufzeit vergeben (erster freier Buchstabe
+  des Parteinamens, <kbd>A</kbd>/<kbd>J</kbd>/<kbd>N</kbd> bleiben reserviert)
+  und stehen auf dem jeweiligen Partei-Chip — im aktuellen Stadtrat also
+  C, G, F, S, R, D, L. Buchstabenkürzel pausieren, solange ein Textfeld aktiv
+  ist. Sitze und Mitgliederkarten sind per Tab erreichbar.
 
 ## Demo
 
