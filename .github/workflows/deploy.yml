@@ -27,6 +27,11 @@ jobs:
           protocol: ftps
           local-dir: ./
           server-dir: abstimmung/
+
+          # Alle Projekte teilen sich ein FTP-Konto. Kurz nach einer anderen
+          # Übertragung nimmt Hostinger die Verbindung verzögert an, und die
+          # 30 s Standard-Timeout der Action reichen dann nicht.
+          timeout: 120000
           exclude: |
             **/.git*
             **/.git*/**
