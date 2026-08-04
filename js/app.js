@@ -37,6 +37,16 @@ function download(content, filename, type) {
 const DEMO_MODE = new URLSearchParams(location.search).has('demo');
 const BACKUP_KEY = 'council-session-backup';
 
+/* Das Backend liegt unter derselben Domain wie das Tool. Auf dem
+   GitHub-Pages-Spiegel und beim Öffnen per file:// gibt es keines — dort
+   erscheint das Übermitteln-Feld gar nicht erst, statt einen Knopf
+   anzubieten, der nur scheitern kann. */
+const SAVE_ENDPOINT = (() => {
+  const h = location.hostname;
+  const reachable = h.endsWith('moosburg.eu') || h === 'localhost' || h === '127.0.0.1';
+  return reachable ? '/api/sessions' : null;
+})();
+
 function clearBackup() {
   try { localStorage.removeItem(BACKUP_KEY); } catch (e) {}
 }
@@ -599,20 +609,28 @@ function buildVoteJSON(vote, presenceHistory) {
 function buildZipBlob(state, memberLookup, bodyName) {
   const zip = new JSZip();
   zip.file('protokoll.txt', generateHumanProtocol(state, bodyName));
+  zip.file('oeffentlich.json',
+    JSON.stringify(buildPartJSON(state, memberLookup, bodyName, 'public'), null, 2));
+  zip.file('nichtoeffentlich.json',
+    JSON.stringify(buildPartJSON(state, memberLookup, bodyName, 'nonpublic'), null, 2));
 
-  const base = {
+  return zip.generateAsync({ type: 'blob' });
+}
+
+/* Eine Hälfte der Sitzung als schlichtes Objekt. Trägt sowohl die beiden
+   JSON-Dateien im ZIP als auch — nur für den öffentlichen Teil — den
+   Upload. Eine Quelle für beides, damit Datei und Serverstand nicht
+   auseinanderlaufen können. */
+function buildPartJSON(state, memberLookup, bodyName, mode) {
+  return {
     sitzung: { titel: state.session.title, datum: state.session.date,
       ort: state.session.location, gremium: bodyName },
     anwesenheit: buildPresenceJSON(state, memberLookup),
+    teil: mode === 'public' ? 'öffentlich' : 'nichtöffentlich',
+    abstimmungen: state.votes
+      .filter(v => v.mode === mode)
+      .map(v => buildVoteJSON(v, state.presenceHistory)),
   };
-  const votesFor = mode => state.votes
-    .filter(v => v.mode === mode)
-    .map(v => buildVoteJSON(v, state.presenceHistory));
-
-  zip.file('oeffentlich.json', JSON.stringify({ ...base, teil: 'öffentlich', abstimmungen: votesFor('public') }, null, 2));
-  zip.file('nichtoeffentlich.json', JSON.stringify({ ...base, teil: 'nichtöffentlich', abstimmungen: votesFor('nonpublic') }, null, 2));
-
-  return zip.generateAsync({ type: 'blob' });
 }
 
 /* Toggling a seat always acts on the regular member's seat key, even when
@@ -1197,6 +1215,79 @@ function LogEntryRow({ entry, dispatch }) {
 }
 
 /* ── Export ────────────────────────────────────────────── */
+/* Übermittelt den öffentlichen Teil der Sitzung an moosburg.eu, wo er als
+   nachvollziehbare Quelle für die Stadtratstransparenz-App landet.
+   Ersetzt den Export nicht — der bleibt die Sicherung, und diese Reihenfolge
+   steht so auch in der Oberfläche.
+
+   Zugangsdaten stehen nur im Komponenten-State: kein LocalStorage, keine
+   Wiederverwendung nach dem Neuladen. Das Passwort wird nach Erfolg
+   verworfen. */
+function SubmitPanel({ state, memberLookup, bodyName }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [status, setStatus] = useState({ kind: 'idle' });
+
+  const publicVotes = state.votes.filter(v => v.mode === 'public').length;
+  const busy = status.kind === 'sending';
+  const ready = email.trim() !== '' && password !== '' && publicVotes > 0 && !busy;
+
+  const submit = async e => {
+    e.preventDefault();
+    if (!ready) return;
+    setStatus({ kind: 'sending' });
+    try {
+      const res = await fetch(SAVE_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Basic ' + btoa(unescape(encodeURIComponent(email.trim() + ':' + password))),
+        },
+        body: JSON.stringify(buildPartJSON(state, memberLookup, bodyName, 'public')),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setPassword('');
+        setStatus({ kind: 'ok', text: `Übermittelt als ${data.erfasstVon} — ${data.abstimmungen} Abstimmung${data.abstimmungen === 1 ? '' : 'en'}.` });
+      } else if (res.status === 401) {
+        setStatus({ kind: 'error', text: 'E-Mail oder Passwort stimmt nicht.' });
+      } else {
+        setStatus({ kind: 'error', text: data.error || `Der Server hat abgelehnt (${res.status}).` });
+      }
+    } catch (err) {
+      console.error('Übermittlung fehlgeschlagen', err);
+      setStatus({ kind: 'error', text: 'Keine Verbindung. Das ZIP-Paket sichert die Sitzung.' });
+    }
+  };
+
+  return (
+    <form className="bg-surface rounded-lg border border-brd p-4" onSubmit={submit}>
+      <h3 className="panel-title mb-2">An moosburg.eu übermitteln</h3>
+      <p className="text-xs text-muted mb-3">
+        Übertragen wird ausschließlich der öffentliche Teil
+        {publicVotes > 0
+          ? <> — derzeit <b>{publicVotes} Abstimmung{publicVotes === 1 ? '' : 'en'}</b>.</>
+          : <>. Bisher wurde im öffentlichen Teil nichts abgestimmt.</>}
+        {' '}Der nichtöffentliche Teil verlässt dieses Gerät nicht.
+      </p>
+      <div className="space-y-2">
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+          placeholder="E-Mail" autoComplete="username" disabled={busy}
+          className="w-full px-3 py-2 rounded-lg border border-brd text-sm" />
+        <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+          placeholder="Passwort" autoComplete="current-password" disabled={busy}
+          className="w-full px-3 py-2 rounded-lg border border-brd text-sm" />
+        <button type="submit" disabled={!ready}
+          className="w-full py-2.5 rounded-lg font-bold text-sm transition-colors bg-primary text-white hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed">
+          {busy ? 'Wird übermittelt …' : 'Öffentlichen Teil übermitteln'}
+        </button>
+      </div>
+      {status.kind === 'ok' && <p className="text-xs mt-2 font-semibold text-green-700">{status.text}</p>}
+      {status.kind === 'error' && <p className="text-xs mt-2 font-semibold text-primary">{status.text}</p>}
+    </form>
+  );
+}
+
 function ExportPanel({ state, activeMembers, memberLookup, bodyName, onDownloaded }) {
   const doTxt = () => {
     const txt = generateHumanProtocol(state, bodyName);
@@ -1731,6 +1822,11 @@ function App() {
             {state.session.status === 'ended' && (
               <ExportPanel state={state} activeMembers={activeMembers} memberLookup={memberLookup}
                 bodyName={bodyName} onDownloaded={handleDownloaded} />
+            )}
+            {/* Nach dem Export, nicht davor: Die Datei in der Hand ist die
+                Sicherung, die Übermittlung das Zusätzliche. */}
+            {state.session.status === 'ended' && SAVE_ENDPOINT && (
+              <SubmitPanel state={state} memberLookup={memberLookup} bodyName={bodyName} />
             )}
           </div>
 
