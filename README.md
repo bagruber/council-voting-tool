@@ -19,6 +19,9 @@ Repository-Ordner.
 > [GitHub-Issue](https://github.com/bagruber/council-voting-tool/issues)
 > oder per Mail.
 
+> **Hosting und Plattform-Regeln:** [PLATTFORM.md](PLATTFORM.md) — läuft
+> zweifach (GitHub Pages und `moosburg.eu/abstimmung/`), beides aus `main`.
+
 ## Was die App kann
 
 - **Sitzungsverwaltung** — Eröffnen, Pausieren, Unterbrechen für nicht­öffentlichen
