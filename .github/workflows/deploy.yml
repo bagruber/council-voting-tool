@@ -35,6 +35,13 @@ jobs:
           local-dir: ./dist/
           server-dir: abstimmung/
 
+          # Neuer State-Dateiname seit der Umstellung auf dist/-Deploys: der
+          # alte State beschrieb die js/-Struktur der Vorgaenger-Version und
+          # liess die Action ins Leere loeschen. Die Altdateien im Ordner
+          # (js/, members.json, tagesordnung/, alter State) sind verwaist und
+          # koennen per hPanel-Dateimanager entfernt werden.
+          state-name: .ftp-deploy-sync-state-v2.json
+
           # Alle Projekte teilen sich ein FTP-Konto. Kurz nach einer anderen
           # Übertragung nimmt Hostinger die Verbindung verzögert an, und die
           # 30 s Standard-Timeout der Action reichen dann nicht.
