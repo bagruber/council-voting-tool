@@ -1,0 +1,17 @@
+{
+  "name": "Stadtrat Moosburg a. d. Isar",
+  "htmlTitle": "Stadtrat Sitzungsprotokoll",
+  "sitzung": {
+    "titel": "Stadtratssitzung",
+    "ort": "Rathaus Moosburg, Sitzungssaal"
+  },
+  "begriffe": {
+    "mitglied": "Stadtrat",
+    "vorsitz": "Bürgermeister/in"
+  },
+  "demo": {
+    "bodyId": "bpu",
+    "date": "2026-07-13",
+    "title": "Bau-, Planungs- und Umweltausschuss (Demo)"
+  }
+}

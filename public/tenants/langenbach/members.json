@@ -1,0 +1,93 @@
+{
+  "parties": [
+    { "id": "csu",    "name": "CSU",          "color": "#0a0a0a", "accent": "#0080c8" },
+    { "id": "spd",    "name": "SPD",          "color": "#E31E2D", "accent": "#FF5733" },
+    { "id": "gruene", "name": "Bündnis 90/Die Grünen", "color": "#64A12D", "accent": "#8FC63E" },
+    { "id": "fw",     "name": "Freie Wähler", "color": "#F58220", "accent": "#F9A825" },
+    { "id": "fwo",    "name": "FWO (Freie Wählergemeinschaft Oberhummel)", "color": "#B8B5D6", "accent": "#D3D0E8" },
+    { "id": "uwl",    "name": "UWL (Unabhängige Wähler Langenbach)",       "color": "#5DA9DC", "accent": "#8FC2E5" },
+    { "id": "mila",   "name": "MiLA (Miteinander.Langenbach)",             "color": "#009688", "accent": "#4DB6AC" },
+    { "id": "fresh",  "name": "fresh",        "color": "#36C9C5", "accent": "#5DDBD8" },
+    { "id": "parteilos", "name": "parteilos", "color": "#999999", "accent": "#bbbbbb" }
+  ],
+  "seatOrder": ["csu", "spd", "gruene", "fw", "fwo", "uwl", "mila"],
+
+  "members": [
+    { "id": "schmidt_walter", "firstName": "Walter", "lastName": "Schmidt", "party": "fw", "role": "mayor", "from": "2020-05", "to": null, "title": "Erster Bürgermeister",
+      "profile": {
+        "pronouns": "er/ihn",
+        "titles": [{ "title": "Erster Bürgermeister", "from": "2020-05", "to": null }]
+      }
+    },
+
+    { "id": "jenuwein", "firstName": "Sandra", "lastName": "Jenuwein", "party": "csu", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "sie/ihr", "identity": ["flinta"] }
+    },
+    { "id": "karl", "firstName": "Armin", "lastName": "Karl", "party": "csu", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+
+    { "id": "hehnen", "firstName": "Johannes", "lastName": "Hehnen", "party": "spd", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+    { "id": "huber_christian", "firstName": "Christian", "lastName": "Huber", "party": "spd", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+
+    { "id": "juranowitsch", "firstName": "Verena", "lastName": "Juranowitsch", "party": "gruene", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "sie/ihr", "identity": ["flinta"] }
+    },
+    { "id": "welser", "firstName": "Niklas", "lastName": "Welser", "party": "gruene", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": {
+        "pronouns": "er/ihn",
+        "description": "Sitzt für Bündnis 90/Die Grünen im Gemeinderat und ist zugleich Mitglied bei fresh."
+      }
+    },
+
+    { "id": "apold", "firstName": "Andreas", "lastName": "Apold", "party": "fw", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+    { "id": "boeck", "firstName": "Florian", "lastName": "Böck", "party": "fw", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+    { "id": "wuerfl_ingrid", "firstName": "Ingrid", "lastName": "Würfl", "party": "fw", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "sie/ihr", "identity": ["flinta"] }
+    },
+    { "id": "zitzelsberger", "firstName": "Sebastian", "lastName": "Zitzelsberger", "party": "fw", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+
+    { "id": "goetz", "firstName": "Rudolf", "lastName": "Götz", "party": "fwo", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+    { "id": "wildgruber", "firstName": "Susanne", "lastName": "Wildgruber", "party": "fwo", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "sie/ihr", "identity": ["flinta"] }
+    },
+    { "id": "wuerfl_franz", "firstName": "Franz", "lastName": "Würfl", "party": "fwo", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+
+    { "id": "huber_martin", "firstName": "Martin", "lastName": "Huber", "party": "uwl", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+    { "id": "huber_michael", "firstName": "Michael", "lastName": "Huber", "party": "uwl", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    },
+
+    { "id": "moses", "firstName": "Maik", "lastName": "Moses", "party": "mila", "role": "councillor", "from": "2020-05", "to": null,
+      "profile": { "pronouns": "er/ihn" }
+    }
+  ],
+
+  "bodies": [
+    {
+      "id": "plenum",
+      "name": "Gemeinderat",
+      "shortName": "Plenum",
+      "type": "plenum",
+      "icon": "account_balance",
+      "description": "Das Plenum des Gemeinderats ist das höchste Beschlussgremium der Gemeinde Langenbach. Es besteht aus 16 ehrenamtlichen Gemeinderätinnen und Gemeinderäten sowie dem Ersten Bürgermeister."
+    }
+  ],
+  "media": []
+}
