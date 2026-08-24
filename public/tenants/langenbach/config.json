@@ -1,0 +1,20 @@
+{
+  "name": "Gemeinderat Langenbach",
+  "htmlTitle": "Gemeinderat Langenbach Sitzungsprotokoll",
+  "sitzung": {
+    "titel": "Gemeinderatssitzung",
+    "ort": "Rathaus Langenbach, Sitzungssaal"
+  },
+  "begriffe": {
+    "mitglied": "Gemeinderat",
+    "vorsitz": "Bürgermeister/in"
+  },
+  "farben": {
+    "primary-dark": "#28525E",
+    "primary": "#386D7D",
+    "primary-bright": "#FF6C64",
+    "accent": "#FFBF43",
+    "accent-light": "#FFE9A8",
+    "bg": "#FAF8F5"
+  }
+}

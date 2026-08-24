@@ -1,0 +1,187 @@
+@import "tailwindcss";
+@import "@fontsource/noto-sans/400.css";
+@import "@fontsource/noto-sans/500.css";
+@import "@fontsource/noto-sans/600.css";
+@import "@fontsource/noto-sans/700.css";
+@import "@fontsource/noto-serif/400.css";
+@import "@fontsource/noto-serif/700.css";
+
+/* Werkzeug-Palette. Die --t-Werte sind je Mandant austauschbar: eine
+   config.json kann sie unter "farben" ersetzen, tenant.ts schreibt sie
+   dann auf :root. Die Vorgaben hier sind der Mandant Moosburg. */
+:root {
+  --t-primary-dark: #5A070A;
+  --t-primary: #9B0000;
+  --t-primary-bright: #E6001E;
+  --t-accent: #B39F7A;
+  --t-accent-light: #EAE6DD;
+  --t-bg: #F7F7F5;
+}
+
+@theme inline {
+  --color-primary-dark: var(--t-primary-dark);
+  --color-primary: var(--t-primary);
+  --color-primary-bright: var(--t-primary-bright);
+  --color-accent: var(--t-accent);
+  --color-accent-light: var(--t-accent-light);
+  --color-bg: var(--t-bg);
+}
+
+@theme {
+  --color-surface: #FFFFFF;
+  --color-brd: #E2E1DD;
+  --color-tx: #2D2D2D;
+  --color-tx-m: #6B6B68;
+  /* Abstimmungsfarben sind Semantik, nicht Branding: in allen Mandanten gleich. */
+  --color-vote-yes: #5E9E14;
+  --color-vote-no: #9B0000;
+  --color-absent: #9C9C99;
+  --color-info: #4A87C0;
+
+  --font-sans: "Noto Sans", system-ui, sans-serif;
+  --font-serif: "Noto Serif", Georgia, serif;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.07);
+  --shadow-card-lg: 0 8px 28px rgba(0, 0, 0, 0.14);
+}
+
+body { background: var(--color-bg); color: var(--color-tx); }
+
+/* ── Type scale ──────────────────────────────────────
+   Five steps, ~1.2 ratio, 12px floor. Nothing functional
+   is allowed below 12px — the old build went to 6px. */
+.t-meta    { font-size: 12px; line-height: 1.45; }
+.t-body    { font-size: 14px; line-height: 1.5; }
+.t-strong  { font-size: 15px; line-height: 1.4; font-weight: 600; }
+.t-display { font-size: 18px; line-height: 1.3; }
+
+/* Section headings: the documented Moosburg label style,
+   sized up from 12px so it reads as a heading, not a kicker. */
+.panel-title {
+  font-family: "Noto Serif", Georgia, serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t-primary-dark);
+}
+
+/* ── Seats ───────────────────────────────────────────
+   Circles carry a shadow and no border; panels carry a
+   border and no shadow. One edge treatment each. */
+.seat-circle {
+  width: clamp(38px, 5.5vw, 52px);
+  height: clamp(38px, 5.5vw, 52px);
+  font-size: clamp(12px, 1.6vw, 14px);
+}
+.seat-initials { pointer-events: none; }
+
+/* Absolutely positioned, so easing left/top reflows nothing else. */
+.seat-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: left 0.2s ease-out, top 0.2s ease-out;
+}
+
+.seat-node {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  cursor: pointer; user-select: none;
+  background: none; border: none; padding: 0;
+}
+.seat-node:hover { transform: scale(1.06); }
+.seat-node.disabled { cursor: default; opacity: 0.3; pointer-events: none; }
+.seat-node.absent-seat { opacity: 0.45; }
+.seat-node:focus-visible,
+.card-btn:focus-visible,
+.agenda-btn:focus-visible {
+  outline: 2px solid var(--t-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.vote-indicator { cursor: pointer; z-index: 10; transition: transform 0.1s; }
+.vote-indicator:hover { transform: scale(1.15); }
+.seat-vote-badge { width: 22px; height: 22px; font-size: 12px; }
+
+.vote-badge { animation: pop 0.15s ease; }
+@keyframes pop { 0% { transform: scale(0.7); } 100% { transform: scale(1); } }
+.log-enter { animation: slideIn 0.2s ease-out; }
+@keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+/* The ring's arc per seat scales with its absolute radius, not with the
+   box, so more legible labels need real width. The box grows only where
+   the page container has room for the labels that hang outside it. */
+.council-circle-container {
+  min-height: 300px;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+@media (min-width: 1536px) {
+  .council-circle-container { max-width: 860px; }
+}
+
+/* Outside labels: plain text on a plain field, no chip,
+   no shadow. 12px floor, so they stay legible. */
+.seat-label-outside {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 2px;
+  pointer-events: none;
+  line-height: 1.2;
+}
+@media (min-width: 1536px) {
+  .seat-label-outside { font-size: 13px; }
+}
+.seat-label-outside.lbl-above { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 4px; }
+.seat-label-outside.lbl-left  { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 6px; text-align: right; }
+.seat-label-outside.lbl-right { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 6px; text-align: left; }
+.seat-label-outside.lbl-below { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px; }
+
+/* Below 900px there is no room for 24 legible labels around a
+   ring. Drop them and let the named member cards below carry
+   identification, rather than shrinking type to 6px. */
+/* Arc available per seat is 2*PI*0.41*containerWidth / 24, i.e. roughly
+   0.107 x width. Discs are held under ~85% of that so neighbours never
+   touch: at a 375px viewport that is ~31px, not the 41px shipped before. */
+@media (max-width: 900px) {
+  .seat-label-outside { display: none; }
+  .seat-circle {
+    width: clamp(26px, 8.5vw, 48px);
+    height: clamp(26px, 8.5vw, 48px);
+    font-size: clamp(11px, 2.6vw, 15px);
+  }
+  .seat-vote-badge { width: 16px; height: 16px; font-size: 10px; }
+}
+
+/* Keyboard affordances are noise on a touch device. */
+@media (max-width: 900px) {
+  .kbd-hint, .kbd-section { display: none; }
+  .kbd-mt { margin-top: 0; }
+}
+
+.tab-active { border-bottom: 2px solid var(--t-primary); color: var(--t-primary); font-weight: 600; }
+.tab-inactive { border-bottom: 2px solid transparent; color: var(--color-tx-m); }
+
+/* Readable measure for the protocol prose */
+.protocol-measure { max-width: 72ch; }
+
+kbd {
+  font-family: "Noto Sans", system-ui, sans-serif;
+  font-size: 11px; font-weight: 600;
+  background: #FFFFFF; border: 1px solid #C9C7C1;
+  border-bottom-width: 2px;
+  border-radius: 4px; padding: 1px 6px;
+  color: #2D2D2D; white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .seat-node:hover { transform: none; }
+}

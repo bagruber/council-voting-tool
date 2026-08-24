@@ -11,14 +11,13 @@ Kontext steht im Repo `bagruber/moosburg-eu` in `BRIEFING.md`.
 
 | | Adresse | Quelle |
 |---|---|---|
-| GitHub Pages | `bagruber.github.io/council-voting-tool/` | Branch `main`, roh ausgeliefert |
-| moosburg.eu | `moosburg.eu/abstimmung/` | Branch `main` über `.github/workflows/deploy.yml` |
+| GitHub Pages | `bagruber.github.io/council-voting-tool/` | `main`, gebaut über `.github/workflows/pages.yml` |
+| moosburg.eu | `moosburg.eu/abstimmung/` | `main`, gebaut über `.github/workflows/deploy.yml` |
 
-Beide kommen aus `main` — ein Commit erreicht beide. Ausgeschlossen vom Deploy
-sind nur Git-Metadaten und Markdown.
-
-Alle Pfade im Tool sind relativ (`src="js/app.js"`, `fetch('members.json')`),
-deshalb funktioniert es im Unterordner ohne Anpassung.
+Beide kommen aus `main`, ein Commit erreicht beide. Deployt wird jeweils der
+`dist/`-Ordner eines Vite-Builds; der Deploy-Workflow lässt vorher die Tests
+laufen. Der Build läuft mit `base: "./"`, alle Pfade sind relativ, dieselbe
+Ausgabe funktioniert deshalb unter beiden Adressen ohne Anpassung.
 
 ## Übermitteln an das Backend
 
@@ -66,22 +65,19 @@ Es gibt keine Selbstregistrierung. Zugangsdaten erzeugt
 Ein Zugang besteht aus E-Mail und Passwort, der Server kennt nur den
 bcrypt-Hash. Entziehen heißt: Eintrag aus der Server-Config löschen.
 
-## Abhängigkeiten kommen von CDN
+## Alles ist gebündelt
 
-React, ReactDOM, Babel Standalone, Tailwind und JSZip werden zur Laufzeit von
-`unpkg.com` bzw. `cdn.tailwindcss.com` geladen, JSX wird im Browser
-transpiliert. Zwei Folgen:
+Seit dem Port auf Vite (August 2026) liegen React, Tailwind, JSZip und die
+Schriften im Build; es wird nichts von CDNs geladen. Zwei Folgen:
 
-- **Ohne Netz startet das Tool nicht.** Für eine Sitzung im Saal ohne
-  verlässliches WLAN wäre das ein Risiko — die Dateien lokal abzulegen wäre
-  die Lösung.
-- **Auf moosburg.eu gibt es deshalb keine Content-Security-Policy.** Eine
-  strenge CSP an der Domain-Wurzel würde dieses Tool sofort lahmlegen. Sobald
-  die Abhängigkeiten lokal liegen, wird sie möglich.
+- **Nach dem ersten Laden braucht das Tool kein Netz mehr**, bis exportiert
+  oder übermittelt wird. Für die Sitzung im Saal mit wackligem WLAN ist das
+  der Punkt, an dem es drauf ankommt.
+- **Die Content-Security-Policy auf moosburg.eu ist damit möglich geworden.**
+  Dieses Tool war der Grund, warum es keine gab.
 
-Da der Code im Browser transpiliert wird, meldet kein Build einen Syntaxfehler.
-Vor dem Commit lohnt eine Prüfung, etwa mit `esbuild --loader=jsx` gegen
-`js/app.js`.
+Typprüfung und Tests laufen vor jedem Deploy (`npm run typecheck`,
+`npm run test`); der Demo-Durchlauf-Test fährt eine komplette Sitzung durch.
 
 ## Gestaltung
 

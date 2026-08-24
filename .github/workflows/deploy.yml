@@ -14,6 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
 
       # Das FTP-Login landet bereits im Document-Root der Domain. Ein
       # vorangestelltes public_html/ würde dort einen zweiten, über das Web
@@ -25,15 +32,10 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
-          local-dir: ./
+          local-dir: ./dist/
           server-dir: abstimmung/
 
           # Alle Projekte teilen sich ein FTP-Konto. Kurz nach einer anderen
           # Übertragung nimmt Hostinger die Verbindung verzögert an, und die
           # 30 s Standard-Timeout der Action reichen dann nicht.
           timeout: 120000
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/*.md
