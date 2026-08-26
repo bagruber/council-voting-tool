@@ -7,15 +7,12 @@ nicht abhaken — die Datei soll kurz bleiben.*
 ## Toolchain-Stand
 
 Dieses Repo laeuft seit dem 26.08.2026 auf **pnpm** (nicht npm) und auf der
-projektweiten Hausbasis:
+projektweiten Hausbasis. **Die Zielversionen stehen nicht hier**, sondern in
+`hausbasis/baseline.json` — eine Quelle statt einer Tabelle je Repo. Abgleich:
 
-| Paket | Version |
-|---|---|
-| typescript | ~7.0.2 |
-| @types/node | ^26.3.0 |
-| vite | ^8.2.2 |
-| @vitejs/plugin-react | ^6.1.0 |
-| react / react-dom | 19.2.8 |
+```bash
+node ../hausbasis/check.mjs --kurz
+```
 
 Der Sinn ist Deduplizierung: alle Repos teilen sich einen pnpm-Store, der genau so
 weit dedupliziert, wie die Versionen uebereinstimmen. Gemessen kostet ein Repo mit
