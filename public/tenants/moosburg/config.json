@@ -9,6 +9,15 @@
     "mitglied": "Stadtrat",
     "vorsitz": "Bürgermeister/in"
   },
+  "stadtratQuelle": {
+    "url": "/stadtrat/data/members.json",
+    "tasten": {
+      "csu": "c", "gruene": "g", "fw": "w", "spd": "s", "fresh": "f",
+      "afd": "a", "fdp": "d", "oedp": "o", "linke": "l", "umb": "u",
+      "parteilos": "p"
+    },
+    "seatOrderZusatz": ["oedp", "fdp"]
+  },
   "demo": {
     "bodyId": "bpu",
     "date": "2026-07-13",

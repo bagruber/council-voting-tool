@@ -11,7 +11,7 @@ export interface Party {
 export interface PartyHistoryEntry {
   party: string;
   from?: string;
-  to?: string;
+  to?: string | null;
 }
 
 export interface Member {
@@ -182,6 +182,18 @@ export type Action =
 
 /* ── Mandanten ───────────────────────────────────────── */
 
+/** Verweis auf die Datenautorität bagruber/council. Steht der Block in der
+ *  Mandanten-Config, liegt members.json (live wie eingecheckt) im
+ *  council-Rohformat und wird beim Laden übersetzt (src/council.ts). */
+export interface StadtratQuelle {
+  /** Live-Quelle, z. B. "/stadtrat/data/members.json" auf moosburg.eu. */
+  url: string;
+  /** Tastenkürzel je Partei-id; council kennt keine Kürzel. */
+  tasten?: Record<string, string>;
+  /** Parteien, die council nicht mehr führt, für historische Sitzordnungen. */
+  seatOrderZusatz?: string[];
+}
+
 export interface TenantDemo {
   bodyId: string;
   date: string;
@@ -198,6 +210,8 @@ export interface TenantConfig {
   begriffe: { mitglied: string; vorsitz: string };
   /** Ersetzt die --t-*-Farbwerte, Schlüssel wie in src/index.css. */
   farben?: Record<string, string>;
+  /** Wenn gesetzt: members.json kommt aus bagruber/council, siehe StadtratQuelle. */
+  stadtratQuelle?: StadtratQuelle;
   /** Ohne diesen Block gibt es für den Mandanten keinen Demo-Modus. */
   demo?: TenantDemo;
 }
