@@ -14,13 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: npm test
-      - run: npm run build
+      - run: pnpm run build
 
       # Das FTP-Login landet bereits im Document-Root der Domain. Ein
       # vorangestelltes public_html/ würde dort einen zweiten, über das Web
