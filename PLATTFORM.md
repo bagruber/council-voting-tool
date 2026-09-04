@@ -12,7 +12,7 @@ Kontext steht im Repo `bagruber/moosburg-eu` in `BRIEFING.md`.
 | | Adresse | Quelle |
 |---|---|---|
 | GitHub Pages | `bagruber.github.io/council-voting-tool/` | `main`, gebaut über `.github/workflows/pages.yml` |
-| moosburg.eu | `moosburg.eu/abstimmung/` | `main`, gebaut über `.github/workflows/deploy.yml` |
+| moosburg.eu | `moosburg.eu/abstimmung/` | `main`, gebaut über `.github/workflows/moosburg-eu.yml` |
 
 Beide kommen aus `main`, ein Commit erreicht beide. Deployt wird jeweils der
 `dist/`-Ordner eines Vite-Builds; der Deploy-Workflow lässt vorher die Tests
@@ -81,7 +81,9 @@ Typprüfung und Tests laufen vor jedem Deploy (`npm run typecheck`,
 
 ## Gestaltung
 
-Die Farb- und Schrift-Tokens stehen in [DESIGN.md](DESIGN.md).
+Die Rollen beschreibt [DESIGN.md](DESIGN.md), die Werte stehen in
+`src/index.css`. Der Moosburg-Kanon aus `moosburg-design` gilt hier bewusst
+nicht, weil jeder Mandant eigene Farben mitbringt.
 
 ### Verbotenes Muster: der einseitige Kantenakzent
 
@@ -96,5 +98,16 @@ strukturelle Linien wie ein Zeitstrahl.
 ### Tastatur vor Maus
 
 Die Fraktionen haben Vorrang auf den Buchstaben, weil in der Sitzung schnell
-erfasst wird. Wer neue Kürzel einführt, prüft die Belegung in `DESIGN.md` und
-im README — die Befehle nehmen, was übrig bleibt.
+erfasst wird. Wer neue Kürzel einführt, prüft die Belegung im README und im Block
+`tasten` der `config.json` des Mandanten — die Befehle nehmen, was übrig
+bleibt.
+
+## Zählung
+
+Eingebunden: `<script src="/assets/zaehler.js" defer></script>` in
+`index.html`. Die App hat nur eine Ansicht, der Aufruf beim Laden genügt.
+
+Warum die Zählung ohne Einwilligungsbanner auskommt, warum deshalb hier
+niemals eine Sitzungs-ID in `sessionStorage` oder `localStorage` nachgerüstet
+werden darf und warum der Aufruf auf GitHub Pages absichtlich ins Leere läuft,
+steht in `bagruber/moosburg-eu`, `README.md`, Abschnitt „Zählen".
