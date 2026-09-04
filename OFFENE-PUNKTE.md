@@ -19,13 +19,6 @@ weit dedupliziert, wie die Versionen uebereinstimmen. Gemessen kostet ein Repo m
 abweichenden Versionen ~158 MB, ein Versions-Zwilling ~8 MB. **Einzelne Pakete
 also nicht im Alleingang hochziehen** — das faellt allen anderen Repos zur Last.
 
-## Nichts davon ist gepusht
-
-Alle Aenderungen vom 26.08.2026 liegen als lokale Commits. Der Deploy-Workflow
-wurde von `npm ci` auf `pnpm install --frozen-lockfile` umgestellt und bekommt
-einen `pnpm/action-setup@v4`-Schritt. **Der erste Push aktiviert das.** Bricht
-danach ein Deploy, ist das die erste Stelle zum Nachsehen — nicht der App-Code.
-
 ## Beim naechsten Paket-Update
 
 Weder `pnpm install` noch `pnpm prune` raeumt die alte Version aus
