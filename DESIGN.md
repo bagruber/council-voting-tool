@@ -1,42 +1,25 @@
-# Moosburg Design Language
+# Designsprache des Sitzungswerkzeugs
 
-Designsprache der Council Transparency App. Wiederverwendbar in anderen Projekten.
+Absichtlich **nicht** der Moosburg-Kanon aus `moosburg-design`: jeder Mandant
+bringt eigene Farben mit, und in der Sitzung schlägt Informationsdichte den
+Markenauftritt. Was hier steht, gilt für dieses Werkzeug.
+
+Die Zahlen stehen in `src/index.css`, nicht hier. Diese Datei beschreibt die
+Rollen und die Regeln; wer einen Wert braucht, liest ihn dort. Bis September
+2026 standen beide Stellen nebeneinander und die Tabellen hier waren an der
+Hälfte der Werte veraltet.
 
 ## Farben
 
-### Primär (Moosburg-Rot)
-| Token | Hex | Verwendung |
-|---|---|---|
-| `--primary-dark` | `#5A070A` | Überschriften, Hover-States |
-| `--primary` | `#9B0000` | Links, aktive Elemente |
-| `--primary-bright` | `#E6001E` | Akzentlinien, Gradient-Endpunkt |
+Zwei Schichten in `src/index.css`:
 
-Gradient für Hero-Bereiche: `linear-gradient(135deg, --primary-dark, --primary, --primary-bright)`
-
-### Akzent (Gold)
-| Token | Hex | Verwendung |
-|---|---|---|
-| `--accent` | `#B39F7A` | Section-Headings, Badges |
-| `--accent-light` | `#E8DFCF` | Hintergründe, Tag-Chips, Hover |
-
-### Oberfläche
-| Token | Hex | Verwendung |
-|---|---|---|
-| `--bg` | `#FAF8F5` | Seiten-Hintergrund (warm off-white) |
-| `--surface` | `#FFFFFF` | Cards, Dropdowns, Modals |
-| `--border` | `#E8E2D8` | Trennlinien, Card-Borders |
-| `--text` | `#2D2D2D` | Fließtext |
-| `--text-muted` | `#777777` | Sekundärtext, Metadaten |
-
-### Semantisch
-| Token | Hex | Verwendung |
-|---|---|---|
-| `--yes` | `#78BE1E` | Zustimmung, Erfolg |
-| `--no` | `#9B0000` | Ablehnung, Fehler |
-| `--absent` | `#B0B0B0` | Abwesend, inaktiv |
-| `--info` | `#5B9BD5` | Hinweise, Anträge |
-| `--teal` | `#00B4D8` | Meilensteine |
-| `--purple` | `#9B59B6` | Sonderkategorie |
+- **`--t-*` sind je Mandant austauschbar** (Rot, Akzent, Grundton). Eine
+  `config.json` unter `public/tenants/<id>/` ersetzt sie unter `"farben"`,
+  `tenant.ts` schreibt sie beim Laden auf `:root`. Die Vorgaben im Stylesheet
+  sind der Mandant Moosburg.
+- **Der Rest ist für alle Mandanten gleich**, allen voran die
+  Abstimmungsfarben: Ja, Nein, Abwesend und Hinweis sind Semantik, nicht
+  Branding, und dürfen nicht mandantenabhängig kippen.
 
 ## Typografie
 
@@ -58,10 +41,8 @@ Basis: `line-height: 1.6`, Textfarbe `--text`.
 
 ## Schatten
 
-| Token | Wert | Verwendung |
-|---|---|---|
-| `--shadow` | `0 1px 3px rgba(0,0,0,0.07)` | Cards, ruhende Elemente |
-| `--shadow-lg` | `0 4px 16px rgba(0,0,0,0.1)` | Hover-Cards, Dropdowns, Suchfeld |
+Zwei Stufen, `--shadow-card` für ruhende Elemente und `--shadow-card-lg` für
+Hover-Karten, Dropdowns und das Suchfeld. Werte in `src/index.css`.
 
 ## Komponenten
 
