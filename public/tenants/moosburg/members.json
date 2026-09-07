@@ -1,7 +1,7 @@
 {
   "_herkunft": {
     "quelle": "bagruber/council · data/members.json",
-    "stand": "2026-08-19",
+    "stand": "2026-09-07",
     "skript": "scripts/hole-stadtrat.mjs",
     "hinweis": "GENERIERT, nicht von Hand ändern. Neu erzeugen: node scripts/hole-stadtrat.mjs"
   },
@@ -81,6 +81,32 @@
     "spd",
     "afd",
     "csu"
+  ],
+  "councilOrder": [
+    "stanglmaier",
+    "beibl",
+    "ruemelin",
+    "linz_kilian",
+    "roeck",
+    "lauterbach",
+    "meier",
+    "sixt",
+    "grundner",
+    "sabanovic",
+    "dick",
+    "strobl",
+    "marcus",
+    "marschoun",
+    "ghadieh",
+    "welter",
+    "kehlringer",
+    "haberl",
+    "tristl",
+    "linz_karin",
+    "schweiger",
+    "reither",
+    "hadersdorfer",
+    "heinz"
   ],
   "members": [
     {

@@ -10,8 +10,9 @@
  *    partyHistory-Grenzen sind in council bereits ausschließlich.
  *  - Tastenkürzel je Partei kennt council nicht, sie kommen aus der
  *    Mandanten-Config (stadtratQuelle.tasten).
- *  - Die Plenums-Sitzordnung (councilOrder) ergibt sich aus der aktuellen
- *    Belegung der Plenumssitze; council führt sie je Sitz als occupants.
+ *  - Die Sitzordnung im Kreis kommt als councilOrder aus council. Fehlt sie,
+ *    bleibt die Belegung der Plenumssitze als Rückfall — die ist dort aber
+ *    fürs zweireihige Halbrund sortiert und ergibt im Kreis keine Runde.
  *  - Gremien mit anderem type als plenum/ausschuss (Aufsichts- und
  *    Verwaltungsräte) sind keine Abstimmungsgremien und entfallen. */
 import type { BodyDef, Member, Party, StadtratQuelle } from "./types";
@@ -19,6 +20,7 @@ import type { BodyDef, Member, Party, StadtratQuelle } from "./types";
 export interface CouncilRawData {
   parties: { id: string; name: string; color: string }[];
   seatOrder?: string[];
+  councilOrder?: string[];
   members: {
     id: string;
     firstName: string;
@@ -66,13 +68,14 @@ export function fromCouncilFormat(raw: CouncilRawData, quelle: StadtratQuelle): 
   );
 
   const plenum = raw.bodies.find((b) => b.type === "plenum");
-  const councilOrder = (plenum?.seats ?? [])
+  const ausSitzen = (plenum?.seats ?? [])
     .map((s) => {
       const occupants = s.occupants ?? [];
       const aktuell = occupants.filter((o) => !o.to).at(-1) ?? occupants.at(-1);
       return aktuell?.member;
     })
     .filter((id): id is string => !!id);
+  const councilOrder = raw.councilOrder?.length ? raw.councilOrder : ausSitzen;
 
   const members: Member[] = raw.members.map((m) => {
     const out: Member = {
