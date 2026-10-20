@@ -10,7 +10,8 @@
     "vorsitz": "Bürgermeister/in"
   },
   "stadtratQuelle": {
-    "url": "/stadtrat/data/members.json",
+    "verzeichnis": "/stadtrat/data/",
+    "verzeichnisJeHost": { "bagruber.github.io": "/council/data/" },
     "tasten": {
       "csu": "c", "gruene": "g", "fw": "w", "spd": "s", "fresh": "f",
       "afd": "a", "fdp": "d", "oedp": "o", "linke": "l", "umb": "u",
