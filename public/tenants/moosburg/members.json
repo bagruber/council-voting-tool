@@ -1,7 +1,7 @@
 {
   "_herkunft": {
-    "quelle": "bagruber/council · data/members.json",
-    "stand": "2026-09-07",
+    "quelle": "bagruber/council · data/members.json, data/parties.json, data/bodies.json",
+    "stand": "2026-10-09",
     "skript": "scripts/hole-stadtrat.mjs",
     "hinweis": "GENERIERT, nicht von Hand ändern. Neu erzeugen: node scripts/hole-stadtrat.mjs"
   },
@@ -113,11 +113,15 @@
       "id": "meinelt",
       "firstName": "Anita",
       "lastName": "Meinelt",
-      "party": "csu",
-      "role": "mayor",
-      "from": "2002-05-01",
-      "to": "2020-04-30",
       "title": "Erste Bürgermeisterin",
+      "mandates": [
+        {
+          "from": "2002-05-01",
+          "to": "2020-04-30",
+          "party": "csu",
+          "role": "mayor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "titles": [
@@ -134,28 +138,25 @@
       "firstName": "Josef",
       "lastName": "Dollinger",
       "nickname": "Sepp",
-      "party": "fw",
-      "role": "mayor",
-      "from": "2014-05-01",
-      "to": "2026-04-30",
       "title": "Erster Bürgermeister",
-      "roleHistory": [
+      "mandates": [
         {
-          "role": "councillor",
           "from": "2014-05-01",
-          "to": "2020-04-30"
-        }
-      ],
-      "partyHistory": [
-        {
+          "to": "2020-05-01",
           "party": "fw",
-          "from": "2014-05",
-          "to": "2025-01"
+          "role": "councillor"
         },
         {
-          "party": "parteilos",
+          "from": "2020-05-01",
+          "to": "2025-01",
+          "party": "fw",
+          "role": "mayor"
+        },
+        {
           "from": "2025-01",
-          "to": null
+          "to": "2026-04-30",
+          "party": "parteilos",
+          "role": "mayor"
         }
       ],
       "profile": {
@@ -184,10 +185,14 @@
       "firstName": "Maximilian",
       "lastName": "Mader",
       "nickname": "Max",
-      "party": "csu",
-      "role": "mayor",
-      "from": "2026-05-01",
-      "to": null,
+      "title": "Erster Bürgermeister",
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "csu",
+          "role": "mayor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "titles": [
@@ -206,24 +211,23 @@
             "elected": true
           }
         ]
-      },
-      "title": "Erster Bürgermeister"
+      }
     },
     {
       "id": "linz_karin",
       "firstName": "Karin",
       "lastName": "Linz",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "identity": [
           "flinta"
-        ],
-        "committees": [
-          "bpu"
         ],
         "contact": {
           "email": "karin.linz@csu-moosburg.de",
@@ -245,10 +249,13 @@
       "firstName": "Rudolf",
       "lastName": "Heinz",
       "nickname": "Rudi",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "titles": [
@@ -279,21 +286,18 @@
       "firstName": "Georg",
       "lastName": "Hadersdorfer",
       "nickname": "Hadschi",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": null,
       "title": "Ehrenamtsreferent",
-      "partyHistory": [
+      "mandates": [
         {
-          "party": "fw",
           "from": "2014-05-01",
-          "to": "2017-10-06"
+          "to": "2017-10-06",
+          "party": "fw",
+          "role": "councillor"
         },
         {
-          "party": "csu",
           "from": "2017-10-06",
-          "to": null
+          "party": "csu",
+          "role": "councillor"
         }
       ],
       "profile": {
@@ -331,15 +335,15 @@
       "firstName": "Manfred",
       "lastName": "Tristl",
       "nickname": "Mane",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
-        "committees": [
-          "bpu"
-        ],
         "contact": {
           "email": "mga.tristl@t-online.de"
         },
@@ -358,10 +362,14 @@
       "id": "weber",
       "firstName": "Erwin",
       "lastName": "Weber",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2002-05-01",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2002-05-01",
+          "to": "2026-04-30",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "titles": [
@@ -387,10 +395,22 @@
       "firstName": "Ludwig",
       "lastName": "Haberl",
       "nickname": "Wick",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2018-11-23",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2018-11-23",
+          "to": "2020-05-01",
+          "party": "umb",
+          "role": "councillor"
+        },
+        {
+          "from": "2020-05-01",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "hilberg"
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "elections": [
@@ -402,28 +422,19 @@
             "elected": false
           }
         ]
-      },
-      "partyHistory": [
-        {
-          "party": "umb",
-          "from": "2018-11-23",
-          "to": "2020-05-01"
-        },
-        {
-          "party": "csu",
-          "from": "2020-05-01",
-          "to": null
-        }
-      ]
+      }
     },
     {
       "id": "kehlringer",
       "firstName": "Lorena",
       "lastName": "Kehlringer",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "identity": [
@@ -448,10 +459,13 @@
       "id": "reither",
       "firstName": "Dr. Dominikus",
       "lastName": "Reither",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -472,11 +486,14 @@
       "id": "beibl",
       "firstName": "Verena",
       "lastName": "Beibl",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2020-05-01",
-      "to": null,
       "nee": "Kuch",
+      "mandates": [
+        {
+          "from": "2020-05-01",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "identity": [
@@ -488,9 +505,6 @@
             "from": "2020-05",
             "to": null
           }
-        ],
-        "committees": [
-          "bpu"
         ],
         "contact": {
           "email": "verena.beibl@gruene-moosburg.de",
@@ -512,11 +526,14 @@
       "id": "stanglmaier",
       "firstName": "Dr. Michael",
       "lastName": "Stanglmaier",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2000-05-01",
-      "to": null,
       "title": "Dritter Bürgermeister",
+      "mandates": [
+        {
+          "from": "2000-05-01",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "titles": [
@@ -553,20 +570,18 @@
       "firstName": "Alfred",
       "lastName": "Wagner",
       "nickname": "Tscharlie",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2022-05-31",
-      "partyHistory": [
+      "mandates": [
         {
-          "party": "umb",
           "from": "2014-05-01",
-          "to": "2017-02-15"
+          "to": "2017-02-15",
+          "party": "umb",
+          "role": "councillor"
         },
         {
-          "party": "gruene",
           "from": "2017-02-15",
-          "to": null
+          "to": "2022-05-31",
+          "party": "gruene",
+          "role": "councillor"
         }
       ],
       "profile": {
@@ -578,10 +593,14 @@
       "firstName": "Evelin",
       "lastName": "Altenbeck",
       "nickname": "Evi",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "1991-05-01",
-      "to": "2022-05-31",
+      "mandates": [
+        {
+          "from": "1991-05-01",
+          "to": "2022-05-31",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr"
       }
@@ -590,10 +609,14 @@
       "id": "von_pressentin",
       "firstName": "Nathalie",
       "lastName": "von Pressentin",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2020-05-01",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2020-05-01",
+          "to": "2026-04-30",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "identity": [
@@ -620,10 +643,14 @@
       "firstName": "Johannes",
       "lastName": "Becher",
       "nickname": "Jojo",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2008-05-01",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2008-05-01",
+          "to": "2026-04-30",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -638,10 +665,18 @@
       "id": "becher_a",
       "firstName": "Alexandra",
       "lastName": "Becher",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2022-06-20",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2022-06-20",
+          "to": "2026-04-30",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "wagner",
+        "altenbeck"
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "identity": [
@@ -666,15 +701,19 @@
       "firstName": "Kilian",
       "lastName": "Linz",
       "nickname": "Kili",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2022-06-20",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2022-06-20",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "wagner",
+        "altenbeck"
+      ],
       "profile": {
         "pronouns": "er/ihn",
-        "committees": [
-          "bpu"
-        ],
         "contact": {
           "email": "kilian.linz@gruene-moosburg.de",
           "facebook": "/kili.linz"
@@ -694,10 +733,13 @@
       "id": "roeck",
       "firstName": "Matthias",
       "lastName": "Röck",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -719,10 +761,13 @@
       "id": "ruemelin",
       "firstName": "Ramona",
       "lastName": "Rümelin",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "identity": [
@@ -747,10 +792,16 @@
       "id": "grundner",
       "firstName": "Thomas",
       "lastName": "Grundner",
-      "party": "fw",
-      "role": "councillor",
-      "from": "2016-01-11",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2016-01-11",
+          "party": "fw",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "groeneveld"
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -771,10 +822,14 @@
       "id": "lauterbach",
       "firstName": "Reinhard",
       "lastName": "Lauterbach",
-      "party": "fw",
-      "role": "councillor",
-      "from": "2020-05-01",
-      "to": null,
+      "title": "Zweiter Bürgermeister",
+      "mandates": [
+        {
+          "from": "2020-05-01",
+          "party": "fw",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -796,23 +851,23 @@
             "elected": true
           }
         ]
-      },
-      "title": "Zweiter Bürgermeister"
+      }
     },
     {
       "id": "reif",
       "firstName": "Johann",
       "lastName": "Reif",
       "nickname": "Hans",
-      "party": "fw",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2026-04-30",
+          "party": "fw",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
-        "committees": [
-          "bpu"
-        ],
         "contact": {
           "email": "johann.reif@moosburg.org"
         },
@@ -829,15 +884,16 @@
       "id": "kieninger",
       "firstName": "Ludwig",
       "lastName": "Kieninger",
-      "party": "fw",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2026-04-30",
+          "party": "fw",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
-        "committees": [
-          "bpu"
-        ],
         "contact": {
           "email": "Ludwig.Kieninger@t-online.de"
         },
@@ -856,10 +912,13 @@
       "id": "sixt",
       "firstName": "Josef",
       "lastName": "Sixt",
-      "party": "fw",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "fw",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -881,10 +940,13 @@
       "id": "meier",
       "firstName": "Christian",
       "lastName": "Meier",
-      "party": "fw",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "fw",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -906,10 +968,14 @@
       "firstName": "Gerhard",
       "lastName": "Beubl",
       "nickname": "Gerd",
-      "party": "spd",
-      "role": "councillor",
-      "from": "1989-05-01",
-      "to": "2025-03-23",
+      "mandates": [
+        {
+          "from": "1989-05-01",
+          "to": "2025-03-23",
+          "party": "spd",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn"
       }
@@ -918,10 +984,14 @@
       "id": "pschorr",
       "firstName": "Martin",
       "lastName": "Pschorr",
-      "party": "spd",
-      "role": "councillor",
-      "from": "1972-05-01",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "1972-05-01",
+          "to": "2026-04-30",
+          "party": "spd",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -940,15 +1010,18 @@
       "id": "marcus",
       "firstName": "Gunnar",
       "lastName": "Marcus",
-      "party": "spd",
-      "role": "councillor",
-      "from": "2025-03-24",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2025-03-24",
+          "party": "spd",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "beubl"
+      ],
       "profile": {
         "pronouns": "er/ihn",
-        "committees": [
-          "bpu"
-        ],
         "elections": [
           {
             "year": 2026,
@@ -964,10 +1037,19 @@
       "id": "marschoun",
       "firstName": "Christoph",
       "lastName": "Marschoun",
-      "party": "spd",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2020-04-30",
+          "party": "spd",
+          "role": "councillor"
+        },
+        {
+          "from": "2026-05-01",
+          "party": "spd",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -982,26 +1064,21 @@
             "elected": true
           }
         ]
-      },
-      "periods": [
-        {
-          "from": "2014-05-01",
-          "to": "2020-04-30"
-        },
-        {
-          "from": "2026-05-01"
-        }
-      ]
+      }
     },
     {
       "id": "wittmann",
       "firstName": "Thomas",
       "lastName": "Wittmann",
       "nickname": "Tom",
-      "party": "fresh",
-      "role": "councillor",
-      "from": "2020-05-01",
-      "to": "2021-10-25",
+      "mandates": [
+        {
+          "from": "2020-05-01",
+          "to": "2021-10-25",
+          "party": "fresh",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "titles": [
@@ -1030,10 +1107,14 @@
       "id": "neumayr",
       "firstName": "Julia",
       "lastName": "Neumayr",
-      "party": "fresh",
-      "role": "councillor",
-      "from": "2020-05-01",
-      "to": "2022-10-10",
+      "mandates": [
+        {
+          "from": "2020-05-01",
+          "to": "2022-10-10",
+          "party": "fresh",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "identity": [
@@ -1045,17 +1126,24 @@
       "id": "gruebl",
       "firstName": "Julian",
       "lastName": "Grübl",
-      "party": "fresh",
-      "role": "councillor",
-      "from": "2021-10-25",
-      "to": "2024-10-21",
+      "mandates": [
+        {
+          "from": "2021-10-25",
+          "to": "2024-10-21",
+          "party": "fresh",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "wittmann"
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "titles": [
           {
             "title": "Jugendbeauftragter",
             "from": "2021-10",
-            "to": "2026-5"
+            "to": "2026-05"
           }
         ],
         "birthYear": 1994,
@@ -1075,10 +1163,17 @@
       "firstName": "Benedict Arya",
       "lastName": "Gruber",
       "nickname": "Bene",
-      "party": "fresh",
-      "role": "councillor",
-      "from": "2022-10-10",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2022-10-10",
+          "to": "2026-04-30",
+          "party": "fresh",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "neumayr"
+      ],
       "profile": {
         "pronouns": "alle Pronomen",
         "identity": [
@@ -1098,12 +1193,6 @@
             "from": "2022-01",
             "to": "2026-05"
           }
-        ],
-        "committees": [
-          "bpu",
-          "hvfa",
-          "pa",
-          "ar_klaeranlage"
         ],
         "motions": [
           {
@@ -1149,15 +1238,19 @@
       "firstName": "Michael",
       "lastName": "Hobmaier",
       "nickname": "Michi",
-      "party": "fresh",
-      "role": "councillor",
-      "from": "2024-10-21",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2024-10-21",
+          "to": "2026-04-30",
+          "party": "fresh",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "gruebl"
+      ],
       "profile": {
         "pronouns": "er/ihn",
-        "committees": [
-          "bpu"
-        ],
         "contact": {
           "linkedin": "/michael-hobmaier-9895a9226"
         },
@@ -1176,10 +1269,13 @@
       "id": "dick",
       "firstName": "Johanna",
       "lastName": "Dick",
-      "party": "fresh",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "fresh",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "sie/ihr",
         "identity": [
@@ -1201,10 +1297,13 @@
       "firstName": "Benjamin",
       "lastName": "Sabanovic",
       "nickname": "Benny",
-      "party": "fresh",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "fresh",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "identity": [
@@ -1225,15 +1324,15 @@
       "id": "welter",
       "firstName": "Gerhard-Michael",
       "lastName": "Welter",
-      "party": "afd",
-      "role": "councillor",
-      "from": "2020-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2020-05-01",
+          "party": "afd",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
-        "committees": [
-          "bpu"
-        ],
         "contact": {
           "email": "stadtrat@welter-moosburg.de"
         },
@@ -1252,10 +1351,13 @@
       "id": "ghadieh",
       "firstName": "Moutasem",
       "lastName": "Daoud Ghadieh",
-      "party": "afd",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "afd",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -1276,10 +1378,14 @@
       "id": "kaestl",
       "firstName": "Jörg",
       "lastName": "Kästl",
-      "party": "oedp",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2026-04-30",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2026-04-30",
+          "party": "oedp",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "titles": [
@@ -1303,20 +1409,18 @@
       "id": "fincke",
       "firstName": "Philipp",
       "lastName": "Fincke",
-      "party": "fdp",
-      "role": "councillor",
-      "from": "2020-05-01",
-      "to": "2026-04-30",
-      "partyHistory": [
+      "mandates": [
         {
+          "from": "2020-05-01",
+          "to": "2025-01",
           "party": "fdp",
-          "from": "2020-05",
-          "to": "2025-01"
+          "role": "councillor"
         },
         {
-          "party": "parteilos",
           "from": "2025-01",
-          "to": null
+          "to": "2026-04-30",
+          "party": "parteilos",
+          "role": "councillor"
         }
       ],
       "profile": {
@@ -1333,10 +1437,17 @@
       "id": "john",
       "firstName": "Stefan",
       "lastName": "John",
-      "party": "linke",
-      "role": "councillor",
-      "from": "2017-12-11",
-      "to": "2023-07-24",
+      "mandates": [
+        {
+          "from": "2017-12-11",
+          "to": "2023-07-24",
+          "party": "linke",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "zitzlsberger"
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "birthYear": 1995
@@ -1347,10 +1458,16 @@
       "firstName": "Alexander",
       "lastName": "Strobl",
       "nickname": "Alex",
-      "party": "linke",
-      "role": "councillor",
-      "from": "2023-07-24",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2023-07-24",
+          "party": "linke",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "john"
+      ],
       "profile": {
         "pronouns": "er/ihn",
         "contact": {
@@ -1371,10 +1488,17 @@
       "id": "banner",
       "firstName": "Sibylle",
       "lastName": "Banner",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2018-05-14",
-      "to": "2020-04-30",
+      "mandates": [
+        {
+          "from": "2018-05-14",
+          "to": "2020-04-30",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
+      "succeeds": [
+        "schaffer"
+      ],
       "profile": {
         "identity": [
           "flinta"
@@ -1385,41 +1509,55 @@
       "id": "kerscher",
       "firstName": "Thomas",
       "lastName": "Kerscher",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2020-04-30",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2020-04-30",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {}
     },
     {
       "id": "mueller_a",
       "firstName": "Andreas",
       "lastName": "Müller",
-      "title": "Dipl. Ing.",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2020-04-30",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2020-04-30",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {}
     },
     {
       "id": "schaffer",
       "firstName": "Bernd",
       "lastName": "Schaffer",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2018-05-14",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2018-05-14",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {}
     },
     {
       "id": "schweiger",
       "firstName": "Christian",
       "lastName": "Schweiger",
-      "party": "csu",
-      "role": "councillor",
-      "from": "2026-05-01",
-      "to": null,
+      "mandates": [
+        {
+          "from": "2026-05-01",
+          "party": "csu",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "contact": {
           "email": "christian.schweiger@schweiger-feldkirchen.de"
@@ -1439,10 +1577,14 @@
       "id": "bauer",
       "firstName": "Irene",
       "lastName": "Bauer",
-      "party": "gruene",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2020-04-30",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2020-04-30",
+          "party": "gruene",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "identity": [
           "flinta"
@@ -1453,30 +1595,42 @@
       "id": "groeneveld",
       "firstName": "Hinrich",
       "lastName": "Groeneveld",
-      "party": "fw",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2015-12-21",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2015-12-21",
+          "party": "fw",
+          "role": "councillor"
+        }
+      ],
       "profile": {}
     },
     {
       "id": "hilberg",
       "firstName": "Michael",
       "lastName": "Hilberg",
-      "party": "umb",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2018-11-05",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2018-11-05",
+          "party": "umb",
+          "role": "councillor"
+        }
+      ],
       "profile": {}
     },
     {
       "id": "koehler",
       "firstName": "Erwin",
       "lastName": "Köhler",
-      "party": "umb",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2020-04-30",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2020-04-30",
+          "party": "umb",
+          "role": "councillor"
+        }
+      ],
       "profile": {
         "titles": [
           {
@@ -1491,10 +1645,14 @@
       "id": "zitzlsberger",
       "firstName": "Johann",
       "lastName": "Zitzlsberger",
-      "party": "linke",
-      "role": "councillor",
-      "from": "2014-05-01",
-      "to": "2017-12-11",
+      "mandates": [
+        {
+          "from": "2014-05-01",
+          "to": "2017-12-11",
+          "party": "linke",
+          "role": "councillor"
+        }
+      ],
       "profile": {}
     }
   ],
@@ -2319,16 +2477,6 @@
       "icon": "engineering",
       "description": "Der Bauausschuss entscheidet über Bauanträge, Bebauungspläne, Verkehrsplanung und Umweltfragen. Er besteht aus 9 stimmberechtigten Mitgliedern plus dem Vorsitzenden.",
       "chair": "mader",
-      "vicechairs": [
-        {
-          "member": "hadersdorfer",
-          "sub": "kehlringer"
-        },
-        {
-          "member": "stanglmaier",
-          "sub": "linz_kilian"
-        }
-      ],
       "seats": [
         {
           "member": "linz_karin",
@@ -2365,6 +2513,14 @@
         {
           "member": "beibl",
           "sub": "roeck"
+        },
+        {
+          "member": "hadersdorfer",
+          "sub": "kehlringer"
+        },
+        {
+          "member": "stanglmaier",
+          "sub": "linz_kilian"
         }
       ],
       "pastSeats": [
@@ -2393,16 +2549,6 @@
           "from": "2020-05-01",
           "to": "2026-04-30",
           "chair": "dollinger",
-          "vicechairs": [
-            {
-              "member": "hadersdorfer",
-              "sub": "heinz"
-            },
-            {
-              "member": "stanglmaier",
-              "sub": "becher_j"
-            }
-          ],
           "seats": [
             {
               "member": "linz_karin",
@@ -2427,10 +2573,36 @@
               ]
             },
             {
-              "member": "welter"
+              "occupants": [
+                {
+                  "member": "john",
+                  "from": "2020-05-01",
+                  "to": "2023-03-05"
+                },
+                {
+                  "member": "welter",
+                  "from": "2023-03-06"
+                }
+              ],
+              "sub": [
+                {
+                  "member": "kaestl",
+                  "from": "2020-05-01",
+                  "to": "2023-03-05"
+                }
+              ]
             },
             {
-              "sub": "gruber",
+              "sub": [
+                {
+                  "member": "neumayr",
+                  "to": "2022-10-09"
+                },
+                {
+                  "member": "gruber",
+                  "from": "2022-10-10"
+                }
+              ],
               "occupants": [
                 {
                   "member": "wittmann",
@@ -2468,7 +2640,30 @@
                 },
                 {
                   "member": "linz_kilian",
-                  "from": "2022-06-20"
+                  "from": "2022-07-04"
+                }
+              ],
+              "sub": [
+                {
+                  "member": "becher_a",
+                  "from": "2022-07-04"
+                }
+              ]
+            },
+            {
+              "member": "hadersdorfer",
+              "sub": "heinz"
+            },
+            {
+              "member": "stanglmaier",
+              "sub": [
+                {
+                  "member": "wagner",
+                  "to": "2022-05-31"
+                },
+                {
+                  "member": "becher_j",
+                  "from": "2022-07-04"
                 }
               ]
             }
@@ -2477,16 +2672,6 @@
         {
           "from": "2026-05-01",
           "chair": "mader",
-          "vicechairs": [
-            {
-              "member": "hadersdorfer",
-              "sub": "kehlringer"
-            },
-            {
-              "member": "stanglmaier",
-              "sub": "linz_kilian"
-            }
-          ],
           "seats": [
             {
               "member": "linz_karin",
@@ -2523,6 +2708,14 @@
             {
               "member": "beibl",
               "sub": "roeck"
+            },
+            {
+              "member": "hadersdorfer",
+              "sub": "kehlringer"
+            },
+            {
+              "member": "stanglmaier",
+              "sub": "linz_kilian"
             }
           ]
         }
@@ -2612,38 +2805,48 @@
       ],
       "seatConfigs": [
         {
-          "from": "2020-05-01",
+          "from": "2023-03-06",
           "to": "2026-04-30",
           "chair": "dollinger",
-          "vicechairs": [],
           "seats": [
             {
-              "member": "haberl",
-              "sub": "tristl"
+              "member": "stanglmaier"
             },
             {
-              "member": "weber",
-              "sub": "linz_karin"
+              "member": "fincke"
             },
             {
-              "member": "marcus",
-              "sub": "pschorr"
+              "member": "lauterbach"
             },
             {
-              "member": "hobmaier",
-              "sub": "gruber"
+              "member": "linz_kilian"
             },
             {
-              "member": "reif",
-              "sub": "grundner"
+              "member": "pschorr"
             },
             {
-              "member": "becher_a",
-              "sub": "von_pressentin"
+              "member": "weber"
             },
             {
-              "member": "stanglmaier",
-              "sub": "beibl"
+              "member": "welter"
+            },
+            {
+              "member": "gruber",
+              "sub": [
+                {
+                  "member": "hobmaier",
+                  "from": "2024-10-21"
+                }
+              ]
+            },
+            {
+              "member": "grundner"
+            },
+            {
+              "member": "heinz"
+            },
+            {
+              "member": "von_pressentin"
             }
           ]
         },
@@ -2697,8 +2900,7 @@
             }
           ]
         }
-      ],
-      "vicechairs": []
+      ]
     },
     {
       "id": "pa",
@@ -2757,7 +2959,6 @@
           "from": "2020-05-01",
           "to": "2026-04-30",
           "chair": "dollinger",
-          "vicechairs": [],
           "seats": [
             {
               "member": "weber",
@@ -2765,11 +2966,31 @@
             },
             {
               "member": "pschorr",
-              "sub": "marcus"
+              "sub": [
+                {
+                  "member": "beubl",
+                  "from": "2023-03-27",
+                  "to": "2025-03-23"
+                },
+                {
+                  "member": "marcus",
+                  "from": "2025-03-24"
+                }
+              ]
             },
             {
               "member": "gruber",
-              "sub": "strobl"
+              "sub": [
+                {
+                  "member": "john",
+                  "from": "2023-06-26",
+                  "to": "2023-07-23"
+                },
+                {
+                  "member": "strobl",
+                  "from": "2023-07-24"
+                }
+              ]
             },
             {
               "member": "kieninger",
@@ -2807,8 +3028,7 @@
             }
           ]
         }
-      ],
-      "vicechairs": []
+      ]
     },
     {
       "id": "rpa",
@@ -2865,9 +3085,56 @@
       "seatConfigs": [
         {
           "from": "2020-05-01",
+          "to": "2025-03-23",
+          "chair": "beubl",
+          "chairSub": "pschorr",
+          "seats": [
+            {
+              "member": "linz_karin",
+              "sub": "weber"
+            },
+            {
+              "member": "tristl",
+              "sub": "heinz"
+            },
+            {
+              "member": "lauterbach",
+              "sub": "kieninger",
+              "role": "Stellv. Vorsitzender"
+            },
+            {
+              "occupants": [
+                {
+                  "member": "gruebl",
+                  "to": "2024-10-20"
+                },
+                {
+                  "member": "hobmaier",
+                  "from": "2024-10-21"
+                }
+              ],
+              "sub": [
+                {
+                  "member": "kaestl",
+                  "from": "2023-06-26"
+                }
+              ]
+            },
+            {
+              "member": "becher_a",
+              "sub": "von_pressentin"
+            },
+            {
+              "member": "beibl",
+              "sub": "becher_j"
+            }
+          ]
+        },
+        {
+          "from": "2025-03-24",
           "to": "2026-04-30",
           "chair": "lauterbach",
-          "vicechairs": [],
+          "chairSub": "kieninger",
           "seats": [
             {
               "member": "linz_karin",
@@ -2882,8 +3149,22 @@
               "sub": "pschorr"
             },
             {
-              "member": "hobmaier",
-              "sub": "kaestl",
+              "occupants": [
+                {
+                  "member": "gruebl",
+                  "to": "2024-10-20"
+                },
+                {
+                  "member": "hobmaier",
+                  "from": "2024-10-21"
+                }
+              ],
+              "sub": [
+                {
+                  "member": "kaestl",
+                  "from": "2023-06-26"
+                }
+              ],
               "role": "Stellv. Vorsitzender"
             },
             {
@@ -2894,8 +3175,7 @@
               "member": "beibl",
               "sub": "becher_j"
             }
-          ],
-          "chairSub": "kieninger"
+          ]
         },
         {
           "from": "2026-05-01",
@@ -2923,8 +3203,7 @@
             }
           ]
         }
-      ],
-      "vicechairs": []
+      ]
     },
     {
       "id": "ar_klaeranlage",
@@ -2991,32 +3270,73 @@
           "chair": "dollinger",
           "seats": [
             {
-              "member": "haberl",
-              "sub": "tristl"
-            },
-            {
               "member": "weber",
               "sub": "linz_karin"
             },
             {
-              "member": "marcus",
-              "sub": "pschorr"
+              "member": "haberl",
+              "sub": "tristl"
             },
             {
-              "member": "hobmaier",
-              "sub": "gruber"
+              "occupants": [
+                {
+                  "member": "wagner",
+                  "to": "2022-05-31"
+                },
+                {
+                  "member": "becher_a",
+                  "from": "2022-07-04"
+                }
+              ],
+              "sub": "von_pressentin"
+            },
+            {
+              "member": "stanglmaier",
+              "sub": "beibl"
             },
             {
               "member": "reif",
               "sub": "grundner"
             },
             {
-              "member": "becher_a",
-              "sub": "von_pressentin"
+              "occupants": [
+                {
+                  "member": "beubl",
+                  "to": "2025-03-23"
+                },
+                {
+                  "member": "marcus",
+                  "from": "2025-03-24"
+                }
+              ],
+              "sub": "pschorr"
             },
             {
-              "member": "stanglmaier",
-              "sub": "beibl"
+              "occupants": [
+                {
+                  "member": "wittmann",
+                  "to": "2021-10-24"
+                },
+                {
+                  "member": "gruebl",
+                  "from": "2021-10-25",
+                  "to": "2024-10-20"
+                },
+                {
+                  "member": "hobmaier",
+                  "from": "2024-10-21"
+                }
+              ],
+              "sub": [
+                {
+                  "member": "neumayr",
+                  "to": "2022-10-09"
+                },
+                {
+                  "member": "gruber",
+                  "from": "2022-10-10"
+                }
+              ]
             }
           ]
         },
@@ -3075,32 +3395,6 @@
         "from": "2020-05",
         "to": "2026-05"
       }
-    }
-  ],
-  "media": [
-    {
-      "id": "merkur",
-      "name": "Münchner Merkur",
-      "color": "#008bd0",
-      "logo": "img/logos/merkur.svg"
-    },
-    {
-      "id": "sz",
-      "name": "Süddeutsche Zeitung",
-      "color": "#29293a",
-      "logo": "img/logos/sz.svg"
-    },
-    {
-      "id": "br",
-      "name": "Bayerischer Rundfunk",
-      "color": "#0082c6",
-      "logo": "img/logos/br.svg"
-    },
-    {
-      "id": "mz",
-      "name": "Moosburger Zeitung",
-      "color": "#e20c15",
-      "logo": "img/logos/moosburger.svg"
     }
   ]
 }

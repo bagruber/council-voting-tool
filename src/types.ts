@@ -183,11 +183,16 @@ export type Action =
 /* ── Mandanten ───────────────────────────────────────── */
 
 /** Verweis auf die Datenautorität bagruber/council. Steht der Block in der
- *  Mandanten-Config, liegt members.json (live wie eingecheckt) im
- *  council-Rohformat und wird beim Laden übersetzt (src/council.ts). */
+ *  Mandanten-Config, kommen die Mitglieder aus council: live aus dessen
+ *  data/-Verzeichnis, sonst aus der eingecheckten Kopie members.json, die
+ *  members, parties und bodies zusammenfasst. Übersetzt wird beim Laden
+ *  (src/council.ts). */
 export interface StadtratQuelle {
-  /** Live-Quelle, z. B. "/stadtrat/data/members.json" auf moosburg.eu. */
-  url: string;
+  /** Live-Verzeichnis, z. B. "/stadtrat/data/" auf moosburg.eu. */
+  verzeichnis: string;
+  /** Abweichendes Verzeichnis je Hostname, etwa "/council/data/" auf GitHub
+   *  Pages, wo council unter /council/ statt /stadtrat/ liegt. */
+  verzeichnisJeHost?: Record<string, string>;
   /** Tastenkürzel je Partei-id; council kennt keine Kürzel. */
   tasten?: Record<string, string>;
   /** Parteien, die council nicht mehr führt, für historische Sitzordnungen. */

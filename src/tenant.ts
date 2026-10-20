@@ -2,8 +2,8 @@
  *  config.json, members.json und optional tagesordnung/. Welcher Mandant
  *  läuft, entscheidet der URL-Parameter ?rat=<id>; ohne ihn gilt der
  *  Standard aus tenants/index.json. */
-import { fromCouncilFormat } from "./council";
-import type { CouncilRawData } from "./council";
+import { ausMandaten, fromCouncilFormat } from "./council";
+import type { CouncilQuelle } from "./council";
 import { processRawData } from "./data";
 import type { Tenant, TenantConfig } from "./types";
 
@@ -19,19 +19,31 @@ export function tenantIdFromUrl(): string | null {
 
 type RawMembers = Parameters<typeof processRawData>[0];
 
+/** council's data/-Verzeichnis, zur Form der eingecheckten Kopie zusammengesetzt. */
+async function ladeCouncil(verzeichnis: string, timeoutMs: number): Promise<CouncilQuelle> {
+  const [members, parteien, bodies] = await Promise.all([
+    fetchJson<CouncilQuelle["members"]>(verzeichnis + "members.json", timeoutMs),
+    fetchJson<Pick<CouncilQuelle, "parties" | "seatOrder" | "councilOrder">>(verzeichnis + "parties.json", timeoutMs),
+    fetchJson<CouncilQuelle["bodies"]>(verzeichnis + "bodies.json", timeoutMs),
+  ]);
+  return { ...parteien, members, bodies };
+}
+
 /** Mitgliedsdaten des Mandanten. Nennt die Config eine council-Quelle,
- *  zuerst live von dort (auf moosburg.eu liegt /stadtrat/ im selben Origin);
- *  scheitert das — Sitzungssaal ohne Netz, GitHub-Pages-Vorschau — die
- *  eingecheckte Kopie. Beide Wege liefern das council-Rohformat und laufen
- *  durch dieselbe Übersetzung. Ohne Quellen-Block gilt die Kopie unverändert. */
+ *  zuerst live von dort (auf moosburg.eu liegt /stadtrat/ im selben Origin,
+ *  auf GitHub Pages /council/); scheitert das — Sitzungssaal ohne Netz,
+ *  lokale Entwicklung — die eingecheckte Kopie. Beide Wege liefern dieselbe
+ *  Form und laufen durch dieselbe Übersetzung. Ohne Quellen-Block gilt die
+ *  Kopie unverändert. */
 async function loadMembers(id: string, config: TenantConfig): Promise<RawMembers> {
   const lokal = "tenants/" + id + "/members.json";
   const quelle = config.stadtratQuelle;
   if (!quelle) return fetchJson<RawMembers>(lokal);
+  const live = quelle.verzeichnisJeHost?.[location.hostname] ?? quelle.verzeichnis;
   try {
-    return fromCouncilFormat(await fetchJson<CouncilRawData>(quelle.url, 4000), quelle);
+    return fromCouncilFormat(ausMandaten(await ladeCouncil(live, 4000)), quelle);
   } catch {
-    return fromCouncilFormat(await fetchJson<CouncilRawData>(lokal), quelle);
+    return fromCouncilFormat(ausMandaten(await fetchJson<CouncilQuelle>(lokal)), quelle);
   }
 }
 

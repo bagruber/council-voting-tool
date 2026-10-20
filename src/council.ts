@@ -1,8 +1,9 @@
-/** Übernahme des council-Datenformats (bagruber/council, data/members.json).
- *  Der Stadtrats-Mandant liest seine Stammdaten möglichst live von
- *  /stadtrat/data/members.json und fällt auf die eingecheckte Kopie unter
- *  tenants/moosburg/members.json zurück; beide liegen im council-Rohformat
- *  und laufen durch diese Übersetzung (siehe loadTenant in tenant.ts).
+/** Übernahme des council-Datenformats (bagruber/council, data/).
+ *  Der Stadtrats-Mandant liest seine Stammdaten möglichst live aus
+ *  /stadtrat/data/ (members.json, parties.json, bodies.json) und fällt auf
+ *  die eingecheckte Kopie tenants/moosburg/members.json zurück, die alle drei
+ *  zusammenfasst. Beide laufen durch ausMandaten und diese Übersetzung (siehe
+ *  loadTenant in tenant.ts).
  *
  *  Was übersetzt wird:
  *  - council führt das Mandatsende einschließlich (to = letzter Amtstag),
@@ -46,6 +47,53 @@ export interface CouncilRawData {
       occupants?: { member: string; from?: string; to?: string | null }[];
     }[];
   }[];
+}
+
+/** Ein Abschnitt aus council's mandates (seit 06.10.2026). Berühren sich zwei
+ *  (to des einen = from des nächsten), ist das ein Partei- oder Rollenwechsel;
+ *  eine Lücke dazwischen ist eine Unterbrechung des Mandats. */
+export interface CouncilMandat {
+  from: string;
+  to?: string | null;
+  party: string;
+  role: "mayor" | "councillor";
+}
+
+/** council's members.json, parties.json und bodies.json zusammengefasst. In
+ *  dieser Form liegt auch die eingecheckte Kopie vor. */
+export type CouncilQuelle = Omit<CouncilRawData, "members"> & {
+  members: { id: string; firstName: string; lastName: string; title?: string; mandates: CouncilMandat[] }[];
+};
+
+/** Leitet aus den Mandaten die Felder ab, die fromCouncilFormat liest: Partei
+ *  und Rolle des letzten Abschnitts, Beginn des ersten, Ende des letzten.
+ *  partyHistory fasst aufeinanderfolgende Abschnitte derselben Partei zusammen,
+ *  mit ausschließlichen Grenzen wie bisher. Unterbrechungen kennt das Tool
+ *  nicht; es sah auch vor dem Umbau in council nur Beginn und Ende. */
+export function ausMandaten(quelle: CouncilQuelle): CouncilRawData {
+  const members = quelle.members.map((m) => {
+    const erster = m.mandates[0];
+    const letzter = m.mandates[m.mandates.length - 1];
+    const parteien: { party: string; from: string; to: string | null }[] = [];
+    for (const abschnitt of m.mandates) {
+      const vorher = parteien.at(-1);
+      if (vorher?.party === abschnitt.party) continue;
+      if (vorher) vorher.to = abschnitt.from;
+      parteien.push({ party: abschnitt.party, from: abschnitt.from, to: null });
+    }
+    return {
+      id: m.id,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      party: letzter.party,
+      role: letzter.role,
+      from: erster.from,
+      to: letzter.to ?? null,
+      ...(m.title ? { title: m.title } : {}),
+      ...(parteien.length > 1 ? { partyHistory: parteien } : {}),
+    };
+  });
+  return { ...quelle, members };
 }
 
 export interface CouncilRawResult {

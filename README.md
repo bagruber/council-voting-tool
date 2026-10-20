@@ -112,8 +112,8 @@ Begriffe ("Stadtrat"/"Gemeinderat", Vorsitz-Titel), optional eigene Farben
 (ersetzen die `--t-*`-Werte aus `src/index.css`) und optional ein
 `demo`-Block. Vorlage: `public/tenants/langenbach/config.json`.
 
-**2. `members.json`**: Personen, Parteien, Gremien. Das Format ist dasselbe
-wie in [bagruber/council](https://github.com/bagruber/council):
+**2. `members.json`**: Personen, Parteien, Gremien. So sieht das Format
+aus, wenn ein Rat seine Daten selbst mitbringt:
 
 - **`parties`**: `id`, `name`, `color`, optional `key` (der Buchstabe für
   das Fraktions-Kürzel; ohne ihn wird der erste freie Anfangsbuchstabe
@@ -130,6 +130,13 @@ wie in [bagruber/council](https://github.com/bagruber/council):
   und optional `sub` (Stellvertretung), dazu `chair`, `vicechairs`,
   optional `chairSub`.
 
+Steht in der Config ein `stadtratQuelle`-Block (Moosburg), kommen die
+Mitglieder stattdessen aus [bagruber/council](https://github.com/bagruber/council):
+live aus dessen `data/`-Verzeichnis (`members.json`, `parties.json`,
+`bodies.json`), ohne Netz aus der eingecheckten Kopie, die
+`node scripts/hole-stadtrat.mjs` aus den drei Dateien zusammensetzt. Die
+Übersetzung von council's `mandates` steht in `src/council.ts`.
+
 **3. Eintrag in `public/tenants/index.json`.** Danach ist der Rat unter
 `?rat=<id>` erreichbar; wer ihn zum Standard machen will, ändert dort
 `standard`.
@@ -143,8 +150,8 @@ passenden Sitzungsdatum automatisch geladen.
 Teil der Moosburg-Projekte, Überblick im
 [BRIEFING](https://github.com/bagruber/moosburg-eu). Am engsten verwandt:
 [bagruber/council](https://github.com/bagruber/council), die öffentliche
-Transparenz-App. Sie nutzt dasselbe `members.json`-Datenmodell und erhält
-über den Posteingang auf moosburg.eu die hier erfassten Sitzungen.
+Transparenz-App. Von ihr bezieht der Moosburger Mandant seine Mitglieder, und
+sie erhält über den Posteingang auf moosburg.eu die hier erfassten Sitzungen.
 
 ## Verantwortung
 

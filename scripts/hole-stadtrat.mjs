@@ -1,11 +1,13 @@
 // Erzeugt public/tenants/moosburg/members.json als Kopie der Datenautorität
-// bagruber/council (data/members.json, Geschwister-Checkout erwartet unter
-// ../council). Die Kopie bleibt im council-Rohformat und ist der Rückfall,
-// wenn das Tool die Live-Quelle /stadtrat/data/members.json nicht erreicht;
-// übersetzt wird in beiden Fällen erst beim Laden (src/council.ts).
+// bagruber/council (Geschwister-Checkout erwartet unter ../council). Seit
+// council members.json geteilt hat (06.10.2026), fasst die Kopie dessen
+// members.json, parties.json und bodies.json zu einer Datei zusammen — in
+// derselben Form, die das Tool live aus /stadtrat/data/ zusammensetzt. Sie ist
+// der Rückfall, wenn das Tool die Live-Quelle nicht erreicht; übersetzt wird in
+// beiden Fällen erst beim Laden (src/council.ts).
 //
 // Idempotent: der Stand im Herkunftskopf ist das letzte Commit-Datum der
-// Quelldatei, nicht das Laufdatum. Ein zweiter Lauf ändert nichts.
+// Quelldateien, nicht das Laufdatum. Ein zweiter Lauf ändert nichts.
 //
 //   node scripts/hole-stadtrat.mjs
 
@@ -16,13 +18,14 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const COUNCIL = path.resolve(ROOT, "..", "council");
-const QUELLE = path.join(COUNCIL, "data", "members.json");
+const QUELLEN = ["data/members.json", "data/parties.json", "data/bodies.json"];
 const ZIEL = path.join(ROOT, "public", "tenants", "moosburg", "members.json");
 
-const daten = JSON.parse(fs.readFileSync(QUELLE, "utf8"));
+const [members, parteien, bodies] = QUELLEN.map((q) =>
+  JSON.parse(fs.readFileSync(path.join(COUNCIL, q), "utf8")));
 
 const stand = execFileSync(
-  "git", ["-C", COUNCIL, "log", "-1", "--format=%cs", "--", "data/members.json"],
+  "git", ["-C", COUNCIL, "log", "-1", "--format=%cs", "--", ...QUELLEN],
   { encoding: "utf8" },
 ).trim();
 if (!/^\d{4}-\d{2}-\d{2}$/.test(stand)) {
@@ -31,12 +34,14 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(stand)) {
 
 const kopie = {
   _herkunft: {
-    quelle: "bagruber/council · data/members.json",
+    quelle: "bagruber/council · " + QUELLEN.join(", "),
     stand,
     skript: "scripts/hole-stadtrat.mjs",
     hinweis: "GENERIERT, nicht von Hand ändern. Neu erzeugen: node scripts/hole-stadtrat.mjs",
   },
-  ...daten,
+  ...parteien,
+  members,
+  bodies,
 };
 
 fs.writeFileSync(ZIEL, JSON.stringify(kopie, null, 2) + "\n");
