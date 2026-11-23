@@ -1,0 +1,38 @@
+name: FTP-Zugang prüfen
+
+# Prüft die drei FTP-Secrets, ohne etwas hochzuladen: Anmeldung samt
+# Zertifikat, dass das Login nicht in der Domain-Wurzel liegt und dass
+# FTP_USER zum Konto abstimmung gehört. Dieselben Prüfungen wie „Ziel prüfen“
+# im Deploy, nur einzeln gemeldet, dazu der Inhalt des Login-Verzeichnisses.
+# Gedacht für neue oder geänderte Secrets, vor dem ersten Deploy.
+on:
+  workflow_dispatch:
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Zugang prüfen
+        env:
+          KONTO: abstimmung
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -o pipefail
+          # Die Form des Benutzernamens, ohne die Kontonummer.
+          echo "FTP_USER hat die Form: $(sed 's/[0-9]/0/g' <<< "$FTP_USER")"
+          if ! liste=$(curl -sS --ssl-reqd --user "$FTP_USER:$FTP_PASSWORD" --list-only "ftp://$FTP_HOST/" | tr -d '\r'); then
+            echo "1. Anmeldung: fehlgeschlagen."; exit 1
+          fi
+          echo "1. Anmeldung und Zertifikat: in Ordnung."
+          if grep -qx stadtrat <<< "$liste" && grep -qx abstimmung <<< "$liste"; then
+            echo "2. Verzeichnis: Das Login liegt in der Domain-Wurzel."; exit 1
+          fi
+          echo "2. Verzeichnis: nicht die Domain-Wurzel."
+          case "$FTP_USER" in
+            *"$KONTO") echo "3. Kontoname: endet auf $KONTO." ;;
+            *) echo "3. Kontoname: endet nicht auf $KONTO."; exit 1 ;;
+          esac
+          echo "Im Login-Verzeichnis ($(grep -c . <<< "$liste" || true) Einträge):"
+          head -20 <<< "$liste"
