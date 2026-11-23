@@ -25,18 +25,41 @@ jobs:
       - run: npm test
       - run: pnpm run build
 
-      # Das FTP-Login landet bereits im Document-Root der Domain. Ein
-      # vorangestelltes public_html/ würde dort einen zweiten, über das Web
-      # sichtbaren Ordner anlegen statt in die Wurzel zu schreiben.
+      # Eigenes FTP-Konto, in hPanel auf den Ordner abstimmung beschränkt: Das
+      # Login beginnt dort, deshalb unten server-dir ./. Gehören die Secrets zu
+      # einem anderen Konto oder liegt das Login in der Domain-Wurzel, bricht
+      # der Deploy hier ab, bevor etwas übertragen wird (moosburg-eu/BRIEFING.md).
+      - name: Ziel prüfen
+        env:
+          KONTO: abstimmung
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -o pipefail
+          case "$FTP_USER" in
+            *"$KONTO") ;;
+            *) echo "FTP_USER ist nicht das Konto $KONTO. Abbruch."; exit 1 ;;
+          esac
+          liste=$(curl -sS --ssl-reqd --user "$FTP_USER:$FTP_PASSWORD" --list-only "ftp://$FTP_HOST/" | tr -d '\r')
+          if grep -qx stadtrat <<< "$liste" && grep -qx abstimmung <<< "$liste"; then
+            echo "Das Login liegt in der Domain-Wurzel. Abbruch."; exit 1
+          fi
+
       - name: Nach abstimmung/ spiegeln
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        # v4.4.0, auf den Commit gepinnt: Ein verschobener Tag soll nicht
+        # unbemerkt anderen Code an das FTP-Passwort bringen.
+        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
+          # Prüft das Zertifikat. FTP_HOST ist deshalb srv1973.hstgr.io: Das
+          # Zertifikat lautet auf *.hstgr.io, ftp.moosburg.eu passt nicht dazu.
+          security: strict
           local-dir: ./dist/
-          server-dir: abstimmung/
+          server-dir: ./
 
           # Neuer State-Dateiname seit der Umstellung auf dist/-Deploys: der
           # alte State beschrieb die js/-Struktur der Vorgaenger-Version und
@@ -45,7 +68,6 @@ jobs:
           # koennen per hPanel-Dateimanager entfernt werden.
           state-name: .ftp-deploy-sync-state-v2.json
 
-          # Alle Projekte teilen sich ein FTP-Konto. Kurz nach einer anderen
-          # Übertragung nimmt Hostinger die Verbindung verzögert an, und die
-          # 30 s Standard-Timeout der Action reichen dann nicht.
+          # Kurz nach einer anderen Übertragung nimmt Hostinger die Verbindung
+          # verzögert an; die 30 s Standard-Timeout reichen dann nicht.
           timeout: 120000
